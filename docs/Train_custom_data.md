@@ -84,7 +84,7 @@ Or just use the provided config file in `$YOLOV6_HOME/configs/*_finetune.py`. Do
 ## YOLOv6s Model config file
 model = dict(
     type='YOLOv6s',
-    pretrained='./weights/yolov6s.pt', # download the pretrained model from YOLOv6 github if you're going to use the pretrained model
+    pretrained='./weights/yolov6s_mbla.pt', # download the pretrained model from YOLOv6 github if you're going to use the pretrained model
     depth_multiple = 0.33,
     width_multiple = 0.50,
     ...

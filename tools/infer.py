@@ -17,7 +17,7 @@ from yolov6.core.inferer import Inferer
 
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Inference.', add_help=add_help)
-    parser.add_argument('--weights', type=str, default='weights/yolov6s.pt', help='model path(s) for inference.')
+    parser.add_argument('--weights', type=str, default='weights/yolov6s_mbla.pt', help='model path(s) for inference.')
     parser.add_argument('--source', type=str, default='data/images', help='the source path, e.g. image-file/dir.')
     parser.add_argument('--webcam', action='store_true', help='whether to use webcam.')
     parser.add_argument('--webcam-addr', type=str, default='0', help='the web camera address, local camera or rtsp address.')
@@ -45,7 +45,7 @@ def get_args_parser(add_help=True):
 
 
 @torch.no_grad()
-def run(weights=osp.join(ROOT, 'yolov6s.pt'),
+def run(weights=osp.join(ROOT, 'yolov6s_mbla.pt'),
         source=osp.join(ROOT, 'data/images'),
         webcam=False,
         webcam_addr=0,

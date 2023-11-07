@@ -23,7 +23,7 @@ def boolean_string(s):
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Evalating', add_help=add_help)
     parser.add_argument('--data', type=str, default='./data/coco.yaml', help='dataset.yaml path')
-    parser.add_argument('--weights', type=str, default='./weights/yolov6s.pt', help='model.pt path(s)')
+    parser.add_argument('--weights', type=str, default='./weights/yolov6s_mbla.pt', help='model.pt path(s)')
     parser.add_argument('--batch-size', type=int, default=32, help='batch size')
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.03, help='confidence threshold')
