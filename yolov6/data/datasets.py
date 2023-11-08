@@ -10,7 +10,7 @@ import json
 import time
 import hashlib
 from pathlib import Path
-
+import pyrealsense2 as rs
 from multiprocessing.pool import Pool
 
 import cv2
@@ -699,6 +699,10 @@ class LoadData:
         path = self.files[self.count]
         if self.checkext(path) == 'video':
             self.type = 'video'
+            frames = self.pipeline.wait_for_frames()
+            depth_frame = frames.get_depth_frame()
+            color_frame = frames.get_color_frame()
+
             ret_val, img = self.cap.read()
             while not ret_val:
                 self.count += 1
@@ -716,6 +720,12 @@ class LoadData:
 
     def add_video(self, path):
         self.frame = 0
+        self.pipeline = rs.pipeline()
+        self.pineline_config = rs.config()
+        self.pineline_config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 60)
+        self.pineline_config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 60)
+        # Start streaming
+        self.pipeline.start(self.pineline_config)
         self.cap = cv2.VideoCapture(path)
         self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
