@@ -657,33 +657,39 @@ class TrainValDataset(Dataset):
 
 
 class LoadData:
-    def __init__(self, path, webcam, webcam_addr):
+    def __init__(self, path, webcam, webcam_addr, use_depth_cam):
         self.webcam = webcam
         self.webcam_addr = webcam_addr
-        if webcam: # if use web camera
-            imgp = []
-            vidp = [int(webcam_addr) if webcam_addr.isdigit() else webcam_addr]
+        self.use_depth_cam = use_depth_cam
+        if use_depth_cam:
+            self.add_depth_cam()
         else:
-            p = str(Path(path).resolve())  # os-agnostic absolute path
-            if os.path.isdir(p):
-                files = sorted(glob.glob(os.path.join(p, '**/*.*'), recursive=True))  # dir
-            elif os.path.isfile(p):
-                files = [p]  # files
+            if webcam: # if use web camera
+                imgp = []
+                vidp = [int(webcam_addr) if webcam_addr.isdigit() else webcam_addr]
+                if use_depth_cam:
+                    pass
             else:
-                raise FileNotFoundError(f'Invalid path {p}')
-            imgp = [i for i in files if i.split('.')[-1] in IMG_FORMATS]
-            vidp = [v for v in files if v.split('.')[-1] in VID_FORMATS]
-        self.files = imgp + vidp
-        self.nf = len(self.files)
-        self.type = 'image'
-        if len(vidp) > 0:
-            self.add_video(vidp[0])  # new video
-        else:
-            self.cap = None
+                p = str(Path(path).resolve())  # os-agnostic absolute path
+                if os.path.isdir(p):
+                    files = sorted(glob.glob(os.path.join(p, '**/*.*'), recursive=True))  # dir
+                elif os.path.isfile(p):
+                    files = [p]  # files
+                else:
+                    raise FileNotFoundError(f'Invalid path {p}')
+                imgp = [i for i in files if i.split('.')[-1] in IMG_FORMATS]
+                vidp = [v for v in files if v.split('.')[-1] in VID_FORMATS]
+            self.files = imgp + vidp
+            self.nf = len(self.files)
+            self.type = 'image'
+            if len(vidp) > 0:
+                self.add_video(vidp[0])  # new video
+            else:
+                self.cap = None
 
     # @staticmethod
     def checkext(self, path):
-        if self.webcam:
+        if self.webcam or self.use_depth_cam:
             file_type = 'video'
         else:
             file_type = 'image' if path.split('.')[-1].lower() in IMG_FORMATS else 'video'
@@ -696,38 +702,47 @@ class LoadData:
     def __next__(self):
         if self.count == self.nf:
             raise StopIteration
+        depth_img = None
         path = self.files[self.count]
         if self.checkext(path) == 'video':
             self.type = 'video'
-            frames = self.pipeline.wait_for_frames()
-            depth_frame = frames.get_depth_frame()
-            color_frame = frames.get_color_frame()
+            if self.use_depth_cam:
+                while True:
+                    frames = self.pipeline.wait_for_frames()
+                    depth_frame = frames.get_depth_frame()
+                    color_frame = frames.get_color_frame()
+                    if not depth_frame or not color_frame:
+                        continue
+                    depth_img = np.asanyarray(depth_frame.get_data())
+                    img = np.asanyarray(color_frame.get_data())
 
-            ret_val, img = self.cap.read()
-            while not ret_val:
-                self.count += 1
-                self.cap.release()
-                if self.count == self.nf:  # last video
-                    raise StopIteration
-                path = self.files[self.count]
-                self.add_video(path)
+            else:
                 ret_val, img = self.cap.read()
+                while not ret_val:
+                    self.count += 1
+                    self.cap.release()
+                    if self.count == self.nf:  # last video
+                        raise StopIteration
+                    path = self.files[self.count]
+                    self.add_video(path)
+                    ret_val, img = self.cap.read()
         else:
             # Read image
             self.count += 1
             img = cv2.imread(path)  # BGR
-        return img, path, self.cap
+        return img, path, self.cap, depth_img
 
     def add_video(self, path):
         self.frame = 0
+        self.cap = cv2.VideoCapture(path)
+        self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    def add_depth_cam(self):
         self.pipeline = rs.pipeline()
         self.pineline_config = rs.config()
         self.pineline_config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 60)
         self.pineline_config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 60)
         # Start streaming
         self.pipeline.start(self.pineline_config)
-        self.cap = cv2.VideoCapture(path)
-        self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
     def __len__(self):
         return self.nf  # number of files
