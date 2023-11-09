@@ -662,30 +662,37 @@ class LoadData:
         self.webcam_addr = webcam_addr
         self.use_depth_cam = use_depth_cam
         if use_depth_cam:
-            self.add_depth_cam()
+            self.pipeline = rs.pipeline()
+            self.pineline_config = rs.config()
+            self.pineline_config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 60)
+            self.pineline_config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 60)
+            # Start streaming
+            self.pipeline.start(self.pineline_config)
+            imgp = []
+            vidp = [int(webcam_addr) if webcam_addr.isdigit() else webcam_addr]
+
+        elif webcam: # if use web camera
+            imgp = []
+            vidp = [int(webcam_addr) if webcam_addr.isdigit() else webcam_addr]
+
         else:
-            if webcam: # if use web camera
-                imgp = []
-                vidp = [int(webcam_addr) if webcam_addr.isdigit() else webcam_addr]
-                if use_depth_cam:
-                    pass
+            p = str(Path(path).resolve())  # os-agnostic absolute path
+            if os.path.isdir(p):
+                files = sorted(glob.glob(os.path.join(p, '**/*.*'), recursive=True))  # dir
+            elif os.path.isfile(p):
+                files = [p]  # files
             else:
-                p = str(Path(path).resolve())  # os-agnostic absolute path
-                if os.path.isdir(p):
-                    files = sorted(glob.glob(os.path.join(p, '**/*.*'), recursive=True))  # dir
-                elif os.path.isfile(p):
-                    files = [p]  # files
-                else:
-                    raise FileNotFoundError(f'Invalid path {p}')
-                imgp = [i for i in files if i.split('.')[-1] in IMG_FORMATS]
-                vidp = [v for v in files if v.split('.')[-1] in VID_FORMATS]
-            self.files = imgp + vidp
-            self.nf = len(self.files)
-            self.type = 'image'
-            if len(vidp) > 0:
-                self.add_video(vidp[0])  # new video
-            else:
-                self.cap = None
+                raise FileNotFoundError(f'Invalid path {p}')
+            imgp = [i for i in files if i.split('.')[-1] in IMG_FORMATS]
+            vidp = [v for v in files if v.split('.')[-1] in VID_FORMATS]
+
+        self.files = imgp + vidp
+        self.nf = len(self.files)
+        self.type = 'image'
+        if len(vidp) > 0:
+            self.add_video(vidp[0], use_depth_cam)  # new video
+        else:
+            self.cap = None
 
     # @staticmethod
     def checkext(self, path):
@@ -719,6 +726,7 @@ class LoadData:
             else:
                 ret_val, img = self.cap.read()
                 while not ret_val:
+                    print('while')
                     self.count += 1
                     self.cap.release()
                     if self.count == self.nf:  # last video
@@ -732,17 +740,11 @@ class LoadData:
             img = cv2.imread(path)  # BGR
         return img, path, self.cap, depth_img
 
-    def add_video(self, path):
+    def add_video(self, path, use_depth_cam):
         self.frame = 0
         self.cap = cv2.VideoCapture(path)
         self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    def add_depth_cam(self):
-        self.pipeline = rs.pipeline()
-        self.pineline_config = rs.config()
-        self.pineline_config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 60)
-        self.pineline_config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 60)
-        # Start streaming
-        self.pipeline.start(self.pineline_config)
+
     def __len__(self):
         return self.nf  # number of files

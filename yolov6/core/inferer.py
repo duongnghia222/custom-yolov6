@@ -103,6 +103,10 @@ class Inferer:
             if len(det):
                 det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
                 for *xyxy, conf, cls in reversed(det):
+                    class_num = int(cls)  # integer class
+                    label = None if hide_labels else (
+                        self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
+
                     self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, depth_img, label,
                                             color=self.generate_colors(class_num, True))
                     if save_txt:  # Write to file
@@ -110,12 +114,6 @@ class Inferer:
                         line = (cls, *xywh, conf)
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
-
-                    if save_img:
-                        class_num = int(cls)  # integer class
-                        label = None if hide_labels else (self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
-
-
 
                 img_src = np.asarray(img_ori)
 
@@ -247,7 +245,8 @@ class Inferer:
         p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
         c1 = abs(p1[0] - p2[0]) / 2
         c2 = abs(p1[1] - p2[1]) / 2
-        depth_mm = depth_img[c1, c2]
+        if depth_img:
+            depth_mm = depth_img[c1, c2]
         cv2.rectangle(image, p1, p2, color, thickness=lw, lineType=cv2.LINE_AA)
         if label:
             tf = max(lw - 1, 1)  # font thickness
@@ -255,7 +254,8 @@ class Inferer:
             outside = p1[1] - h - 3 >= 0  # label fits outside box
             p2 = p1[0] + w, p1[1] - h - 3 if outside else p1[1] + h + 3
             cv2.rectangle(image, p1, p2, color, -1, cv2.LINE_AA)  # filled
-            cv2.putText(image, "{} cm".format(depth_mm / 10), (p1[0] + 5, p1[1] + 60), 0, 1.0, (255, 255, 255), 2)
+            if depth_img:
+                cv2.putText(image, "{} cm".format(depth_mm / 10), (p1[0] + 5, p1[1] + 60), 0, 1.0, (255, 255, 255), 2)
             cv2.putText(image, label, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2), font, lw / 3, txt_color,
                         thickness=tf, lineType=cv2.LINE_AA)
 
