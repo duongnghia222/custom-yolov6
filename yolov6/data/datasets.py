@@ -690,7 +690,7 @@ class LoadData:
         self.nf = len(self.files)
         self.type = 'image'
         if len(vidp) > 0:
-            self.add_video(vidp[0], use_depth_cam)  # new video
+            self.add_video(vidp[0])  # new video
         else:
             self.cap = None
 
@@ -714,14 +714,16 @@ class LoadData:
         if self.checkext(path) == 'video':
             self.type = 'video'
             if self.use_depth_cam:
-                while True:
+                frames = self.pipeline.wait_for_frames()
+                depth_frame = frames.get_depth_frame()
+                color_frame = frames.get_color_frame()
+                while not depth_frame or not color_frame:
                     frames = self.pipeline.wait_for_frames()
                     depth_frame = frames.get_depth_frame()
                     color_frame = frames.get_color_frame()
-                    if not depth_frame or not color_frame:
-                        continue
-                    depth_img = np.asanyarray(depth_frame.get_data())
-                    img = np.asanyarray(color_frame.get_data())
+
+                depth_img = np.asanyarray(depth_frame.get_data())
+                img = np.asanyarray(color_frame.get_data())
 
             else:
                 ret_val, img = self.cap.read()
@@ -740,7 +742,7 @@ class LoadData:
             img = cv2.imread(path)  # BGR
         return img, path, self.cap, depth_img
 
-    def add_video(self, path, use_depth_cam):
+    def add_video(self, path):
         self.frame = 0
         self.cap = cv2.VideoCapture(path)
         self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
