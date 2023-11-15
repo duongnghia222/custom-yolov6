@@ -246,7 +246,7 @@ class Inferer:
         c1 = abs(p1[0] - p2[0]) / 2
         c2 = abs(p1[1] - p2[1]) / 2
         print(depth_img)
-        if len(depth_img) > 0:
+        if depth_img is not None and len(depth_img) > 0:
             depth_mm = depth_img[c1, c2]
         cv2.rectangle(image, p1, p2, color, thickness=lw, lineType=cv2.LINE_AA)
         if label:
@@ -255,7 +255,7 @@ class Inferer:
             outside = p1[1] - h - 3 >= 0  # label fits outside box
             p2 = p1[0] + w, p1[1] - h - 3 if outside else p1[1] + h + 3
             cv2.rectangle(image, p1, p2, color, -1, cv2.LINE_AA)  # filled
-            if len(depth_img) > 0:
+            if depth_img is not None and len(depth_img) > 0:
                 cv2.putText(image, "{} cm".format(depth_mm / 10), (p1[0] + 5, p1[1] + 60), 0, 1.0, (255, 255, 255), 2)
             cv2.putText(image, label, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2), font, lw / 3, txt_color,
                         thickness=tf, lineType=cv2.LINE_AA)
