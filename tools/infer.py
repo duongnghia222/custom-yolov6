@@ -72,7 +72,7 @@ def run(weights=osp.join(ROOT, 'yolov6s_mbla.pt'),
     Args:
         weights: The path of model.pt, e.g. yolov6s.pt
         source: Source path, supporting image files or dirs containing images.
-        yaml: Data yaml file, .
+        yaml: Data yaml file,
         img_size: Inference image-size, e.g. 640
         conf_thres: Confidence threshold in inference, e.g. 0.25
         iou_thres: NMS IOU threshold in inference, e.g. 0.45

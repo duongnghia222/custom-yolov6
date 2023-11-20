@@ -10,7 +10,7 @@ import json
 import time
 import hashlib
 from pathlib import Path
-import pyrealsense2 as rs
+from tools.realsense_camera import *
 from multiprocessing.pool import Pool
 
 import cv2
@@ -662,12 +662,7 @@ class LoadData:
         self.webcam_addr = webcam_addr
         self.use_depth_cam = use_depth_cam
         if use_depth_cam:
-            self.pipeline = rs.pipeline()
-            self.pineline_config = rs.config()
-            self.pineline_config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 60)
-            self.pineline_config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 60)
-            # Start streaming
-            self.pipeline.start(self.pineline_config)
+            self.rs = RealsenseCamera()
             imgp = []
             vidp = [int(webcam_addr) if webcam_addr.isdigit() else webcam_addr]
 
@@ -714,21 +709,19 @@ class LoadData:
         if self.checkext(path) == 'video':
             self.type = 'video'
             if self.use_depth_cam:
-                frames = self.pipeline.wait_for_frames()
-                depth_frame = frames.get_depth_frame()
-                color_frame = frames.get_color_frame()
-                while not depth_frame or not color_frame:
-                    frames = self.pipeline.wait_for_frames()
-                    depth_frame = frames.get_depth_frame()
-                    color_frame = frames.get_color_frame()
-
-                depth_img = np.asanyarray(depth_frame.get_data())
-                img = np.asanyarray(color_frame.get_data())
+                ret_val, img, depth_img = self.rs.get_frame_stream()
+                while not ret_val:
+                    self.count += 1
+                    self.cap.release()
+                    if self.count == self.nf:  # last video
+                        raise StopIteration
+                    path = self.files[self.count]
+                    self.add_video(path)
+                    ret_val, img, depth_img = self.rs.get_frame_stream()
 
             else:
                 ret_val, img = self.cap.read()
                 while not ret_val:
-                    print('while')
                     self.count += 1
                     self.cap.release()
                     if self.count == self.nf:  # last video

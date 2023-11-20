@@ -243,9 +243,9 @@ class Inferer:
     def plot_box_and_label(image, lw, box, depth_img, label='', color=(128, 128, 128), txt_color=(255, 255, 255), font=cv2.FONT_HERSHEY_COMPLEX):
         # Add one xyxy box to image with label
         p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
-        c1 = abs(p1[0] - p2[0]) / 2
-        c2 = abs(p1[1] - p2[1]) / 2
-        print(depth_img)
+        c1 = int(abs(p1[0] - p2[0]) / 2)
+        c2 = int(abs(p1[1] - p2[1]) / 2)
+
         if depth_img is not None and len(depth_img) > 0:
             depth_mm = depth_img[c1, c2]
         cv2.rectangle(image, p1, p2, color, thickness=lw, lineType=cv2.LINE_AA)
