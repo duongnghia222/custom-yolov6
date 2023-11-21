@@ -661,6 +661,7 @@ class LoadData:
         self.webcam = webcam
         self.webcam_addr = webcam_addr
         self.use_depth_cam = use_depth_cam
+        self.cap = None
         if use_depth_cam:
             self.rs = RealsenseCamera()
             imgp = []
