@@ -669,6 +669,10 @@ class LoadData:
         elif webcam: # if use web camera
             imgp = []
             vidp = [int(webcam_addr) if webcam_addr.isdigit() else webcam_addr]
+            if len(vidp) > 0:
+                self.add_video(vidp[0])  # new video
+            else:
+                self.cap = None
 
         else:
             p = str(Path(path).resolve())  # os-agnostic absolute path
@@ -684,10 +688,7 @@ class LoadData:
         self.files = imgp + vidp
         self.nf = len(self.files)
         self.type = 'image'
-        if len(vidp) > 0:
-            self.add_video(vidp[0])  # new video
-        else:
-            self.cap = None
+
 
     # @staticmethod
     def checkext(self, path):
