@@ -56,6 +56,9 @@ class Inferer:
         self.files = LoadData(source, webcam, webcam_addr, use_depth_cam)
         self.source = source
 
+        # # Tracker
+        # self.tracker_CSRT = cv2.TrackerCSRT_create()
+
 
     def model_switch(self, model, img_size):
         ''' Model switch to deploy status '''
@@ -109,7 +112,8 @@ class Inferer:
                     self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, depth_img, label,
                                             color=self.generate_colors(class_num, True))
                     if class_num == 0:
-                        self.klt_object_tracking(img, bounding_box=xyxy)
+                        self.KLT_object_tracking(img, bounding_box=xyxy)
+                        self.CSRT_object_tracking(img, bounding_box=xyxy)
                     if save_txt:  # Write to file
                         xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf)
@@ -261,11 +265,25 @@ class Inferer:
             cv2.putText(image, label, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2), font, lw / 3, txt_color,
                         thickness=tf, lineType=cv2.LINE_AA)
 
-    @staticmethod
-    def klt_object_tracking(img, bounding_box):
-        # Initialize KLT tracker
-        # todo
-        pass
+    # @staticmethod
+    # def KLT_object_tracking(img, bounding_box):
+    #     # Initialize KLT tracker
+    #     # todo
+    #     pass
+    #
+    # def CSRT_object_tracking(self, img, bounding_box):
+    #     # Initialize KLT tracker
+    #     # todo
+    #     ok, bbox = self.tracker_CSRT.update(img)
+    #
+    #     if ok:
+    #         # Tracking success
+    #         p1 = (int(bbox[0]), int(bbox[1]))
+    #         p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
+    #         cv2.rectangle(frame, p1, p2, (0, 255, 0), 2, 1)
+    #     else:
+    #         # Tracking failure
+    #         cv2.putText(frame, "Tracking failure detected", (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2)
 
     @staticmethod
     def font_check(font='./yolov6/utils/Arial.ttf', size=10):
