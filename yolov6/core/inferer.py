@@ -99,7 +99,6 @@ class Inferer:
             # check image and font
             assert img_ori.data.contiguous, 'Image needs to be contiguous. Please apply to input images with np.ascontiguousarray(im).'
             self.font_check()
-
             if len(det):
                 det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
                 for *xyxy, conf, cls in reversed(det):
@@ -109,6 +108,8 @@ class Inferer:
 
                     self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, depth_img, label,
                                             color=self.generate_colors(class_num, True))
+                    if class_num == 0:
+                        self.klt_object_tracking(img, bounding_box=xyxy)
                     if save_txt:  # Write to file
                         xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf)
@@ -259,6 +260,12 @@ class Inferer:
                 cv2.putText(image, "{} cm".format(depth_mm / 10), (p1[0] + 5, p1[1] + 60), 0, 1.0, (255, 255, 255), 2)
             cv2.putText(image, label, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2), font, lw / 3, txt_color,
                         thickness=tf, lineType=cv2.LINE_AA)
+
+    @staticmethod
+    def klt_object_tracking(img, bounding_box):
+        # Initialize KLT tracker
+        # todo
+        pass
 
     @staticmethod
     def font_check(font='./yolov6/utils/Arial.ttf', size=10):
