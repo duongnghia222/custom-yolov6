@@ -107,16 +107,15 @@ class Inferer:
             self.font_check()
             if len(det):
                 det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
-                for *xyxy, conf, cls in reversed(det):
+                class_0_detections = [det for det in det if det[4] == 0 and det[5] > 0.8]
+                for *xyxy, conf, cls in reversed(class_0_detections):
                     class_num = int(cls)  # integer class
                     label = None if hide_labels else (
                         self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
 
                     self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, depth_img, label,
                                             color=self.generate_colors(class_num, True))
-                    if class_num == 0:
-                        self.KLT_object_tracking(img, bounding_box=xyxy)
-                        self.CSRT_object_tracking(img, bounding_box=xyxy)
+
                     if save_txt:  # Write to file
                         xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf)
