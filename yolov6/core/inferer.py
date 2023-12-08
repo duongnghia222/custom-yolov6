@@ -35,6 +35,7 @@ class Inferer:
         self.model = DetectBackend(weights, device=self.device)
         self.stride = self.model.stride
         self.class_names = load_yaml(yaml)['names']
+        self.custom_class_names = load_yaml(yaml)['custom_names']
         self.img_size = self.check_img_size(self.img_size, s=self.stride)  # check image size
         self.half = half
 
