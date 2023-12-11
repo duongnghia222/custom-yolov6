@@ -1,0 +1,8 @@
+train: ./data/images/train
+val: ./data/images/valid
+test: ./data/images/test
+
+is_coco: False
+nc: 13
+names: ['book', 'bottle', 'cabinet', 'chair', 'cup', 'door', 'keyboard', 'laptop', 'mouse', 'table', 'trashbin', 'tvmonitor', 'window']
+custom_names: []

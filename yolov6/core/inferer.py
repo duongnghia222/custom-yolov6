@@ -88,6 +88,7 @@ class Inferer:
             t1 = time.time()
             pred_results = self.model(img)
             det = non_max_suppression(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)[0]
+            # print(det)
             t2 = time.time()
 
             if self.webcam or self.use_depth_cam:
@@ -108,11 +109,14 @@ class Inferer:
             self.font_check()
             if len(det):
                 det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
-                class_0_detections = [det for det in det if det[4] == 0 and det[5] > 0.8]
-                for *xyxy, conf, cls in reversed(class_0_detections):
+                # class_0_detections = [det for det in det if det[4] == 0 and det[5] > 0.8]
+                # print(det)
+
+                for *xyxy, conf, cls in reversed(det):
                     class_num = int(cls)  # integer class
                     label = None if hide_labels else (
                         self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
+                    # print(label)
 
                     self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, depth_img, label,
                                             color=self.generate_colors(class_num, True))
