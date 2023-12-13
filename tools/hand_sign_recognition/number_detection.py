@@ -1,10 +1,11 @@
 import cv2
 import mediapipe as mp
 import time
-import math
+# from tools.realsense_camera import *
 import numpy as np
 
 def main():
+    # rs = RealsenseCamera()
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         print("Error: Camera not accessible")
@@ -63,12 +64,14 @@ def process_frame(img, medhands, hands, draw):
 def update_finger_list(handlms, h, w):
     lmlist = []
     fingerlist = []
-    tipids = [4, 8, 12, 16, 20]
+    tipids = [4, 8, 12, 16, 20]  # 4 -> thumb tip, 8,12,16,20 -> index,middle,ring,pinky tips
 
+    # Get all landmarks of a hand
     for id, lm in enumerate(handlms.landmark):
         cx, cy = int(lm.x * w), int(lm.y * h)
         lmlist.append([id, cx, cy])
 
+    # Once we have all 21 landmarks, process them
     if len(lmlist) == 21:
         # Improved thumb detection
         if is_thumb_up(lmlist):
@@ -91,14 +94,23 @@ def is_thumb_up(lmlist):
     angle = calculate_angle(reference_vector, thumb_vector)
 
     # Determine if thumb is up (customize the threshold as needed)
-    return angle > 60  # Example threshold, adjust based on your testing
+    return angle > 0  # Example threshold, adjust based on your testing
 
 
 def calculate_angle(v1, v2):
-    # Returns the angle in degrees between vectors 'v1' and 'v2':
-    cosang = np.dot(v1, v2)
-    sinang = np.linalg.norm(np.cross(v1, v2))
-    return np.arctan2(sinang, cosang) * (180 / np.pi)
+    # Calculate the dot product of v1 and v2
+    dot_product = np.dot(v1, v2)
+
+    # Calculate the determinant (which is the z-component of the cross product in 2D)
+    det = v2[0] * v1[1] - v2[1] * v1[0]
+
+    # Calculate the angle using atan2, returns the angle in radians
+    angle_radians = np.arctan2(det, dot_product)
+
+    # Convert the angle to degrees
+    angle_degrees = np.degrees(angle_radians)
+
+    return angle_degrees
 
 if __name__ == "__main__":
     main()
