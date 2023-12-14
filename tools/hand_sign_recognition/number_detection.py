@@ -4,9 +4,14 @@ import time
 # from tools.realsense_camera import *
 import numpy as np
 
+SCREEN_WIDTH = 1280
+SCREEN_HEIGHT = 720
+
 def main():
     # rs = RealsenseCamera()
     cap = cv2.VideoCapture(0)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, SCREEN_WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, SCREEN_HEIGHT)
     if not cap.isOpened():
         print("Error: Camera not accessible")
         return
@@ -74,40 +79,46 @@ def update_finger_list(handlms, h, w):
     # Once we have all 21 landmarks, process them
     if len(lmlist) == 21:
         # Improved thumb detection
-        if is_thumb_up(lmlist):
-            print("thumb up")
         fingerlist.append(is_thumb_up(lmlist))
+        # print(lmlist[0][1])
 
         # Other fingers
         for id in range(1, 5):
-            fingerlist.append(int(lmlist[tipids[id]][2] < lmlist[tipids[id] - 2][2]))
+            if lmlist[0][1] < SCREEN_WIDTH//2:  # this is left hand
+                fingerlist.append(int(lmlist[tipids[id]][1] > lmlist[tipids[id] - 2][1]))
+            else:
+                fingerlist.append(int(lmlist[tipids[id]][1] < lmlist[tipids[id] - 2][1]))
 
     return fingerlist.count(1)
 
 
 def is_thumb_up(lmlist):
     # Use the vector from the wrist to the base of the index finger as a reference
-    reference_vector = (lmlist[5][1] - lmlist[0][1], lmlist[5][2] - lmlist[0][2])
-    thumb_vector = (lmlist[4][1] - lmlist[2][1], lmlist[4][2] - lmlist[2][2])
+    vector34 = (lmlist[3][1] - lmlist[4][1], lmlist[3][2] - lmlist[4][2])
+    vector32 = (lmlist[3][1] - lmlist[2][1], lmlist[3][2] - lmlist[2][2])
 
     # Calculate angle between vectors
-    angle = calculate_angle(reference_vector, thumb_vector)
+    angle = abs(calculate_angle(vector34, vector32))
 
     # Determine if thumb is up (customize the threshold as needed)
-    return angle > 0  # Example threshold, adjust based on your testing
+    # is_thumb = (angle > 0 and lmlist[4][1] < lmlist[5][1]) or (angle < 0 and lmlist[4][1] > lmlist[5][1])
+    print(angle)
+    return angle < 40 and lmlist[4][2] < lmlist[2][2]
 
 
 def calculate_angle(v1, v2):
     # Calculate the dot product of v1 and v2
     dot_product = np.dot(v1, v2)
 
-    # Calculate the determinant (which is the z-component of the cross product in 2D)
-    det = v2[0] * v1[1] - v2[1] * v1[0]
+    # Compute the norms (magnitudes) of the vectors
+    norm_v1 = np.linalg.norm(v1)
+    norm_v2 = np.linalg.norm(v2)
 
-    # Calculate the angle using atan2, returns the angle in radians
-    angle_radians = np.arctan2(det, dot_product)
+    # Calculate the cosine of the angle (ensure it's within [-1, 1] to avoid numerical issues)
+    cos_angle = np.clip(dot_product / (norm_v1 * norm_v2), -1, 1)
 
-    # Convert the angle to degrees
+    # Calculate the angle in radians and then convert to degrees
+    angle_radians = np.arccos(np.abs(cos_angle))  # Use abs to ensure a positive angle
     angle_degrees = np.degrees(angle_radians)
 
     return angle_degrees
