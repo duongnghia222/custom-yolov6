@@ -7,10 +7,10 @@ class Tracker:
         self.tracker = None
         if type == "CSRT":
             self.tracker = cv2.TrackerCSRT_create()
-            tracker.init(frame, bbox)
+            self.tracker.init(frame, bbox)
         elif type == "KCF":
             self.tracker = cv2.TrackerKCF_create()
-            tracker.init(frame, bbox)
+            self.tracker.init(frame, bbox)
 
     def track(self, frame, bbox):
         ok, bbox = self.tracker.update(self.frame)
