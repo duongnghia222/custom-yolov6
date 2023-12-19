@@ -1,0 +1,36 @@
+
+# Version control
+.git
+.gitignore
+
+# Development tools
+.idea/
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+*.swp
+*.bak
+*.tmp
+.venv/
+.vscode/
+
+# Data, logs, and runs
+data/
+logs/
+runs/
+assets/
+configs/
+
+# Documentation and tutorials
+*.md
+docs/
+tutorial/
+
+# Miscellaneous files
+.DS_Store
+*.tgz
+*.log
+LICENSE
+optional_requirements.txt
+best_ckpt.pt
