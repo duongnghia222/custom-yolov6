@@ -69,21 +69,15 @@ def check_img_size(img_size, s=32, floor=0):
     return new_size if isinstance(img_size, list) else [new_size] * 2
 
 
-def process_image(path, img_size, stride):
-    '''Preprocess image before inference.'''
-    try:
-            img_src = cv2.imread(path)
-            img_src = cv2.cvtColor(img_src, cv2.COLOR_RGB2BGR)
-            assert img_src is not None, f"opencv cannot read image correctly or {path} not exists"
-    except:
-            img_src = np.asarray(Image.open(path))
-            assert img_src is not None, f"Image Not Found {path}, workdir: {os.getcwd()}"
-
+def process_image(img_src, img_size, stride, half=False):
+    '''Process image before image inference.'''
     image = letterbox(img_src, img_size, stride=stride)[0]
-    image = image.transpose((2, 0, 1)) # HWC to CHW
+    # Convert
+    image = image.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
     image = torch.from_numpy(np.ascontiguousarray(image))
-    image = image.float()
-    image /= 255
+    image = image.half() if half else image.float()  # uint8 to fp16/32
+    image /= 255  # 0 - 255 to 0.0 - 1.0
+
     return image, img_src
 
 
@@ -119,8 +113,8 @@ class Detector(DetectBackend):
         prediction = {'boxes': boxes, 'scores': scores, 'labels': labels}
         return prediction
 
-    def predict(self, img_path):
-        img, img_src = process_image(img_path, self.img_size, 32)
+    def predict(self, color_img):
+        img, img_src = process_image(color_img, self.img_size, 32)
         img = img.to(self.device)
         if len(img.shape) == 3:
             img = img[None]
@@ -151,6 +145,19 @@ def create_model(model_name, class_names=CLASS_NAMES, device=DEVICE,
     if not os.path.exists(str(PATH_YOLOv6/'weights') + f'/{model_name}.pt'):
         torch.hub.load_state_dict_from_url(
             f"https://github.com/meituan/YOLOv6/releases/download/0.3.0/{model_name}.pt",
+            str(PATH_YOLOv6/'weights'))
+    return Detector(str(PATH_YOLOv6/'weights') + f'/{model_name}.pt',
+                    class_names, device, img_size=img_size, conf_thres=conf_thres,
+                    iou_thres=iou_thres, max_det=max_det)
+
+
+def create_model_v4(model_name, class_names=CLASS_NAMES, device=DEVICE,
+                 img_size=640, conf_thres=0.25, iou_thres=0.45, max_det=1000):
+    if not os.path.exists(str(PATH_YOLOv6/'weights')):
+        os.mkdir(str(PATH_YOLOv6/'weights'))
+    if not os.path.exists(str(PATH_YOLOv6/'weights') + f'/{model_name}.pt'):
+        torch.hub.load_state_dict_from_url(
+            f"https://github.com/meituan/YOLOv6/releases/download/0.4.0/{model_name}.pt",
             str(PATH_YOLOv6/'weights'))
     return Detector(str(PATH_YOLOv6/'weights') + f'/{model_name}.pt',
                     class_names, device, img_size=img_size, conf_thres=conf_thres,
