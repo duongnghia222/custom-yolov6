@@ -18,12 +18,13 @@ from yolov6.layers.common import DetectBackend
 from yolov6.data.data_augment import letterbox
 from yolov6.data.datasets import LoadData
 from yolov6.utils.nms import non_max_suppression
-from yolov6.utils.torch_utils import get_model_info
+
 
 
 
 class Inferer:
-    def __init__(self, source, webcam, webcam_addr, use_depth_cam, weights, device, yaml, img_size, half):
+    def __init__(self, weights, device, yaml, img_size, half,
+                 conf_threshold, iou_threshold, agnostic_nms, max_det, view_img=True):
 
         self.__dict__.update(locals())
 
@@ -51,17 +52,12 @@ class Inferer:
 
         if self.device.type != 'cpu':
             self.model(torch.zeros(1, 3, *self.img_size).to(self.device).type_as(next(self.model.model.parameters())))  # warmup
+        self.conf_threshold = conf_threshold
+        self.iou_threshold = iou_threshold
+        self.agnostic_nms = agnostic_nms
+        self.max_det = max_det
+        self.view_img = view_img
 
-        # Load data
-        self.webcam = webcam
-        self.webcam_addr = webcam_addr
-        self.use_depth_cam = use_depth_cam
-        self.files = LoadData(source, webcam, webcam_addr, use_depth_cam)
-        self.source = source
-
-        # Tracker
-        self.tracking = False
-        # self.tracker_CSRT = cv2.TrackerCSRT_create()
 
 
     def model_switch(self, model, img_size):
@@ -74,6 +70,53 @@ class Inferer:
                 layer.recompute_scale_factor = None  # torch 1.11.0 compatibility
 
         LOGGER.info("Switch model to deploy modality.")
+
+    def object_finder(self, color_img, depth_img, class_num):
+        fps_calculator = CalcFPS()
+        img, img_src = self.process_image(color_img, self.img_size, self.stride, self.half)
+        img = img.to(self.device)
+        if len(img.shape) == 3:
+            img = img[None]
+            # expand for batch dim
+        t1 = time.time()
+        predict_results = self.model(img)
+        det = non_max_suppression(predict_results, self.conf_threshold, self.iou_threshold, class_num,
+                                  self.agnostic_nms, max_det=self.max_det)[0]
+        t2 = time.time()
+        gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
+        img_ori = img_src.copy()
+        assert img_ori.data.contiguous, 'Image needs to be contiguous. \
+        Please apply to input images with np.ascontiguousarray(im).'
+        self.font_check()
+        if len(det):
+            det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
+            # class_0_detections = [det for det in det if det[4] == 0 and det[5] > 0.8]
+            # print(det)
+
+            for *xyxy, conf, cls in reversed(det):
+                class_num = int(cls)  # integer class
+                label = None if hide_labels else (
+                    self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
+                # print(label)
+
+                self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, depth_img, label,
+                                        color=self.generate_colors(class_num, True))
+
+                if save_txt:  # Write to file
+                    xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+                    line = (cls, *xywh, conf)
+                    with open(txt_path + '.txt', 'a') as f:
+                        f.write(('%g ' * len(line)).rstrip() % line + '\n')
+
+            img_src = np.asarray(img_ori)
+
+        # FPS counter
+        fps_calculator.update(1.0 / (t2 - t1))
+        avg_fps = fps_calculator.accumulate()
+
+
+
+
 
     def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf, view_img=True):
         ''' Model Inference and results visualization '''

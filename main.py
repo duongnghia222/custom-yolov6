@@ -3,8 +3,9 @@ import torch
 import os
 from tools.realsense_camera import *
 from tools.finger_count import *
+from tools.custom_inferer import Inferer
 from yolov6.utils.events import load_yaml
-from yolov6.core.inferer import Inferer
+
 
 
 def run(model):
@@ -57,7 +58,7 @@ def create_inferer(weights='yolov6s_mbla.pt',
         hide_labels=False,
         hide_conf=False,
         half=False):
-    inferer = Inferer(source, webcam, webcam_addr, use_depth_cam, weights, device, yaml, img_size, half)
+    inferer = Inferer(weights, device, yaml, img_size, half)
 
 
 if __name__ == "__main__":
