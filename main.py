@@ -1,6 +1,10 @@
-from hubconf import *
+import pathlib
+import torch
+import os
 from tools.realsense_camera import *
 from tools.finger_count import *
+from yolov6.utils.events import load_yaml
+from yolov6.core.inferer import Inferer
 
 
 def run(model):
@@ -35,12 +39,34 @@ def run(model):
     cv2.destroyAllWindows()
 
 
-if __name__ == "__main__":
-    # Load the YOLOv6 model (choose the appropriate function based on the model size you want to use)
-    model = create_model_v4(model_name="yolov6s_mbla", class_names=CLASS_NAMES, device=DEVICE, img_size=640,
-                            conf_thres=0.25, iou_thres=0.45, max_det=1000)
+def create_inferer(weights='yolov6s_mbla.pt',
+        yaml='data/coco.yaml',
+        img_size=[640, 640],
+        conf_thres=0.4,
+        iou_thres=0.45,
+        max_det=1000,
+        device='0',
+        save_txt=False,
+        not_save_img=True,
+        save_dir=None,
+        view_img=True,
+        classes=None,
+        agnostic_nms=False,
+        project='runs/inference',
+        name='exp',
+        hide_labels=False,
+        hide_conf=False,
+        half=False):
+    inferer = Inferer(source, webcam, webcam_addr, use_depth_cam, weights, device, yaml, img_size, half)
 
-    # Perform real-time detection on RealSense camera feed
-    run(model)
+
+if __name__ == "__main__":
+    PATH_YOLOv6 = pathlib.Path(__file__).parent
+    DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    CLASS_NAMES = load_yaml(str(PATH_YOLOv6 / "data/coco.yaml"))['names']
+    # Load the YOLOv6 model (choose the appropriate function based on the model size you want to use)
+
+
+
 
 
