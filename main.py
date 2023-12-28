@@ -17,6 +17,7 @@ def run(fc, yolo):
     mode = 'disabled'
     last_gesture = None
     gesture_start = None
+    object_to_find = None
 
     while True:
         ret, color_frame, depth_frame = rs_camera.get_frame_stream()
@@ -36,12 +37,15 @@ def run(fc, yolo):
             if time.time() - gesture_start >= 2:
                 if finger_counts == [0, 0]:
                     mode = 'disabled'
+                    object_to_find = None
                     print("All modes disabled.")
                 elif finger_counts == [0, 1]:
                     mode = 'finding'
+                    object_to_find = None
                     print("Finding mode activated.")
                 elif finger_counts == [0, 2]:
                     mode = 'detecting'
+                    object_to_find = None
                     print("Detecting mode activated.")
                 elif finger_counts == [0, 5]:
                     print("Program stopping...")
@@ -51,6 +55,12 @@ def run(fc, yolo):
         if mode == 'finding':
             # Implement finding functionality
             print("Finding mode")
+            if finger_counts != last_gesture:
+                last_gesture = finger_counts
+                gesture_start = time.time()
+            elif time.time() - gesture_start >= 2 and not object_to_find:
+                object_to_find = finger_counts_mapping_obj(finger_counts)
+            print(f"Looking for: {object_to_find}")
         elif mode == 'detecting':
             # Implement detecting functionality
             print("Detecting mode")
@@ -66,11 +76,13 @@ def run(fc, yolo):
 def finger_counts_mapping_obj(object_code):
     if object_code == [1, 0]:
         return "bottle"
+    if object_code == [1, 1]:
+        return "cup"
 
 
 def create_inferer(weights='yolov6s_mbla.pt',
         yaml='data/coco.yaml',
-        img_size=[640, 640],
+        img_size=[640,640],
         conf_threshold=0.4,
         iou_threshold=0.45,
         max_det=1000,
