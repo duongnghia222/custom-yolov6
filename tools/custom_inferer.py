@@ -71,8 +71,8 @@ class Inferer:
 
         LOGGER.info("Switch model to deploy modality.")
 
-    def object_finder(self, color_img, depth_img, class_num):
-        fps_calculator = CalcFPS()
+    def object_finder(self, color_img, class_num):
+        # fps_calculator = CalcFPS()
         img, img_src = self.process_image(color_img, self.img_size, self.stride, self.half)
         img = img.to(self.device)
         if len(img.shape) == 3:
@@ -90,29 +90,29 @@ class Inferer:
         self.font_check()
         if len(det):
             det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
-            # class_0_detections = [det for det in det if det[4] == 0 and det[5] > 0.8]
-            # print(det)
+            return det
 
-            for *xyxy, conf, cls in reversed(det):
-                class_num = int(cls)  # integer class
-                label = None if hide_labels else (
-                    self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
-                # print(label)
+            # for *xyxy, conf, cls in reversed(det):
+            #     # class_num = int(cls)  # integer class
+            #     # label = None if hide_labels else (
+            #     #     self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
+            #     # # print(label)
+            #     #
+            #     # self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, depth_img, label,
+            #     #                         color=self.generate_colors(class_num, True))
+            #     #
+            #     # if save_txt:  # Write to file
+            #     #     xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+            #     #     line = (cls, *xywh, conf)
+            #     #     with open(txt_path + '.txt', 'a') as f:
+            #     #         f.write(('%g ' * len(line)).rstrip() % line + '\n')\
+            #     return xyxy
 
-                self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, depth_img, label,
-                                        color=self.generate_colors(class_num, True))
+            # img_src = np.asarray(img_ori)
 
-                if save_txt:  # Write to file
-                    xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                    line = (cls, *xywh, conf)
-                    with open(txt_path + '.txt', 'a') as f:
-                        f.write(('%g ' * len(line)).rstrip() % line + '\n')
-
-            img_src = np.asarray(img_ori)
-
-        # FPS counter
-        fps_calculator.update(1.0 / (t2 - t1))
-        avg_fps = fps_calculator.accumulate()
+        # # FPS counter
+        # fps_calculator.update(1.0 / (t2 - t1))
+        # avg_fps = fps_calculator.accumulate()
 
 
 

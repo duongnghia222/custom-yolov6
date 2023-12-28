@@ -58,7 +58,8 @@ def create_inferer(weights='yolov6s_mbla.pt',
         hide_labels=False,
         hide_conf=False,
         half=False):
-    inferer = Inferer(weights, device, yaml, img_size, half)
+    infer = Inferer(weights, device, yaml, img_size, half)
+    return infer
 
 
 if __name__ == "__main__":
