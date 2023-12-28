@@ -1,22 +1,22 @@
 import cv2
 import mediapipe as mp
 import time
-# from tools.realsense_camera import *
 import numpy as np
 
 
 class FingersCount:
-    def __init__(self, screen_width, screen_height, img):
+    def __init__(self, screen_width, screen_height):
         self.screen_width = screen_width
         self.screen_height = screen_height
-        self.img = img
         self.medhands = mp.solutions.hands
         # Initialize with max_num_hands set to 2 for detecting two hands
         self.hands = self.medhands.Hands(max_num_hands=2, min_detection_confidence=0.8)
         self.draw = mp.solutions.drawing_utils
+        self.img = None
 
-    def infer(self):
-        imgrgb = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
+    def infer(self, img):
+        self.img = img
+        imgrgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         res = self.hands.process(imgrgb)
 
         finger_counts = []
@@ -67,7 +67,7 @@ class FingersCount:
 
         # Determine if thumb is up (customize the threshold as needed)
         # is_thumb = (angle > 0 and landmark_list[4][1] < landmark_list[5][1]) or (angle < 0 and landmark_list[4][1] > landmark_list[5][1])
-        print(angle)
+        # print(angle)
         return angle < 40 and landmark_list[4][2] < landmark_list[2][2]
 
     @staticmethod
