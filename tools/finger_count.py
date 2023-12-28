@@ -19,24 +19,28 @@ class FingersCount:
         imgrgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         res = self.hands.process(imgrgb)
 
-        finger_counts = []
+        left_hand_count = None
+        right_hand_count = None
 
         if res.multi_hand_landmarks:
             for handlms in res.multi_hand_landmarks:
                 h, w, c = self.img.shape
-                finger_count = self.update_finger_list(handlms, h, w)
-                finger_counts.append(finger_count)
+                finger_count, is_left_hand = self.update_finger_list(handlms, h, w)
+                if is_left_hand:
+                    left_hand_count = finger_count
+                else:
+                    right_hand_count = finger_count
 
                 self.draw.draw_landmarks(self.img, handlms, self.medhands.HAND_CONNECTIONS,
                                          self.draw.DrawingSpec(color=(0, 255, 204), thickness=2, circle_radius=2),
                                          self.draw.DrawingSpec(color=(0, 0, 0), thickness=2, circle_radius=3))
-        return finger_counts
+        return [left_hand_count, right_hand_count]
 
     def update_finger_list(self, hand_landmarks, h, w):
         landmarks_list = []
         finger_list = []
         finger_tips_id = [4, 8, 12, 16, 20]  # 4 -> thumb tip, 8,12,16,20 -> index,middle,ring,pinky tips
-
+        is_left_hand = True
         # Get all landmarks of a hand
         for i, lm in enumerate(hand_landmarks.landmark):
             cx, cy = int(lm.x * w), int(lm.y * h)
@@ -53,9 +57,10 @@ class FingersCount:
                 if landmarks_list[0][1] < self.screen_width // 2:  # this is left hand
                     finger_list.append(int(landmarks_list[finger_tips_id[i]][1] > landmarks_list[finger_tips_id[i] - 2][1]))
                 else:
+                    is_left_hand = False
                     finger_list.append(int(landmarks_list[finger_tips_id[i]][1] < landmarks_list[finger_tips_id[i] - 2][1]))
 
-        return finger_list.count(1)
+        return finger_list.count(1), is_left_hand
 
     def is_thumb_up(self, landmark_list):
         # Use the vector from the wrist to the base of the index finger as a reference
