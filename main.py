@@ -6,11 +6,10 @@ import cv2
 from tools.realsense_camera import *
 from tools.finger_count import FingersCount
 from tools.custom_inferer import Inferer
-# from yolov6.utils.events import load_yaml
+from yolov6.utils.events import load_yaml
 
 
-
-def run(fc, yolo):
+def run(fc, yolo, coco_yaml, custom_dataset_yaml):
     rs_camera = RealsenseCamera()
     print("Starting RealSense camera detection. Press 'q' to quit.")
 
@@ -60,7 +59,20 @@ def run(fc, yolo):
                 gesture_start = time.time()
             elif time.time() - gesture_start >= 2 and not object_to_find:
                 object_to_find = finger_counts_mapping_obj(finger_counts)
-            print(f"Looking for: {object_to_find}")
+            if object_to_find:
+                object_index = coco_yaml.index(object_to_find)
+                print(f"Looking for: {object_to_find} with index", object_index)
+                detection = yolo.object_finder(color_frame, object_index)
+                print(detection)
+                img_ori = color_frame.copy()
+                if detection is not None and len(detection):
+                    detection_flat = detection.flatten()
+                    *xyxy, conf, cls = detection_flat
+                    print(xyxy)
+                    yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
+                                            depth_frame, label='', color=(128, 128, 128), txt_color=(255, 255, 255),\
+                                            font=cv2.FONT_HERSHEY_COMPLEX)
+
         elif mode == 'detecting':
             # Implement detecting functionality
             print("Detecting mode")
@@ -103,14 +115,14 @@ def create_inferer(weights='yolov6s_mbla.pt',
 
 
 if __name__ == "__main__":
-    # PATH_YOLOv6 = pathlib.Path(__file__).parent
-    # DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # CLASS_NAMES = load_yaml(str(PATH_YOLOv6 / "data/coco.yaml"))['names']
+    PATH_YOLOv6 = pathlib.Path(__file__).parent
+    DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    CLASS_NAMES = load_yaml(str(PATH_YOLOv6 / "data/coco.yaml"))['names']
     # Load the YOLOv6 model (choose the appropriate function based on the model size you want to use)\
     screen_width, screen_height = [720, 1280]
     fc = FingersCount(screen_width, screen_height)
     yolo = create_inferer()
-    run(fc, yolo)
+    run(fc, yolo, coco_yaml=CLASS_NAMES, custom_dataset_yaml=None)
 
 
 
