@@ -71,7 +71,7 @@ class Inferer:
 
         LOGGER.info("Switch model to deploy modality.")
 
-    def object_finder(self, color_img, class_num):
+    def object_finder(self, color_img, class_num, predict_threshold):
         # fps_calculator = CalcFPS()
         img, img_src = self.process_image(color_img, self.img_size, self.stride, self.half)
         img = img.to(self.device)
@@ -80,7 +80,7 @@ class Inferer:
             # expand for batch dim
         t1 = time.time()
         predict_results = self.model(img)
-        det = non_max_suppression(predict_results, self.conf_threshold, self.iou_threshold, class_num,
+        det = non_max_suppression(predict_results, predict_threshold, self.iou_threshold, class_num,
                                   self.agnostic_nms, max_det=self.max_det)[0]
         t2 = time.time()
         gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh

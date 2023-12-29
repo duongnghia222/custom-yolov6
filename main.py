@@ -58,20 +58,21 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
                 last_gesture = finger_counts
                 gesture_start = time.time()
             elif time.time() - gesture_start >= 2 and not object_to_find:
-                object_to_find = finger_counts_mapping_obj(finger_counts)
+                object_to_find = finger_counts_mapping_obj(finger_counts)["name"]
             if object_to_find:
                 object_index = coco_yaml.index(object_to_find)
                 print(f"Looking for: {object_to_find} with index", object_index)
-                detection = yolo.object_finder(color_frame, object_index)
+                conf_threshold = finger_counts_mapping_obj(finger_counts)["conf_threshold"]
+                detection = yolo.object_finder(color_frame, object_index, predict_threshold=conf_threshold)
                 print(detection)
-                img_ori = color_frame.copy()
                 if detection is not None and len(detection):
                     detection_flat = detection.flatten()
                     *xyxy, conf, cls = detection_flat
-                    print(xyxy)
-                    yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
-                                            depth_frame, label='', color=(128, 128, 128), txt_color=(255, 255, 255),\
-                                            font=cv2.FONT_HERSHEY_COMPLEX)
+                    # print(xyxy)
+                    # yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
+                    #                         depth_frame, label='', color=(128, 128, 128), txt_color=(255, 255, 255),\
+                    #                         font=cv2.FONT_HERSHEY_COMPLEX)
+
 
         elif mode == 'detecting':
             # Implement detecting functionality
@@ -87,9 +88,9 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
 
 def finger_counts_mapping_obj(object_code):
     if object_code == [1, 0]:
-        return "bottle"
+        return {"name": "bottle", "conf_threshold": 0.4}
     if object_code == [1, 1]:
-        return "cup"
+        return {"name": "cup", "conf_threshold": 0.4}
 
 
 def create_inferer(weights='yolov6s_mbla.pt',
