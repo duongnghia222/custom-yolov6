@@ -13,10 +13,10 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
     rs_camera = RealsenseCamera()
     print("Starting RealSense camera detection. Press 'q' to quit.")
 
-    mode = 'disabled'
+    mode = 'finding' # for debug, change to disabled after that
     last_gesture = None
     gesture_start = None
-    object_to_find = None
+    object_to_find = {"name": "bottle", "conf_threshold": 0.4} # for debug, change to None after that
 
     while True:
         ret, color_frame, depth_frame = rs_camera.get_frame_stream()
@@ -60,14 +60,23 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
             elif time.time() - gesture_start >= 2 and not object_to_find:
                 object_to_find = finger_counts_mapping_obj(finger_counts)["name"]
             if object_to_find:
-                object_index = coco_yaml.index(object_to_find)
-                print(f"Looking for: {object_to_find} with index", object_index)
-                conf_threshold = finger_counts_mapping_obj(finger_counts)["conf_threshold"]
+                object_index = coco_yaml.index(object_to_find["name"])
+                print(f"Looking for: {object_to_find['name']} with index", object_index)
+                conf_threshold = object_to_find["conf_threshold"]
                 detection = yolo.object_finder(color_frame, object_index, predict_threshold=conf_threshold)
                 print(detection)
                 if detection is not None and len(detection):
+                    if len(detection) > 1:
+                        detection = detection[0]
                     detection_flat = detection.flatten()
+                    print(detection_flat)
                     *xyxy, conf, cls = detection_flat
+                    xmin, ymin, xmax, ymax = xyxy
+
+                    center_x = (xmin + xmax) / 2
+                    center_y = (ymin + ymax) / 2
+                    depth_point = depth_frame[int(center_y), int(center_x)]
+                    print("Depth Point:", depth_point)
                     # print(xyxy)
                     # yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
                     #                         depth_frame, label='', color=(128, 128, 128), txt_color=(255, 255, 255),\
