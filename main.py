@@ -6,6 +6,7 @@ import cv2
 from tools.realsense_camera import *
 from tools.finger_count import FingersCount
 from tools.tracker import Tracker
+from tools.instruction import navigate_to_object
 from tools.custom_segmentation import segment_object
 from tools.custom_inferer import Inferer
 from yolov6.utils.events import load_yaml
@@ -80,26 +81,28 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
                 if detection is not None and len(detection):
                     *xyxy, conf, cls = detection
                     xmin, ymin, xmax, ymax = map(int, xyxy)  # Convert each element to an integer
+                    _, depth = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
+                    # object_mask = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
+                    # print(object_mask)
+                    # cv2.imshow("Object Mask", object_mask)
+                    # color_roi = color_frame[ymin:ymax, xmin:xmax]
+                    # _, binary_mask = cv2.threshold(object_mask, 127, 255, cv2.THRESH_BINARY)
+                    # isolated_object = cv2.bitwise_and(color_roi, color_roi, mask=binary_mask)
+                    # color_image_with_object = color_frame.copy()
+                    # color_image_with_object[ymin:ymax, xmin:xmax] = isolated_object
+                    # cv2.imshow("Color Image with Object", color_image_with_object)
 
-                    object_mask = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
-                    print(object_mask)
-                    cv2.imshow("Object Mask", object_mask)
-                    color_roi = color_frame[ymin:ymax, xmin:xmax]
-                    _, binary_mask = cv2.threshold(object_mask, 127, 255, cv2.THRESH_BINARY)
-                    isolated_object = cv2.bitwise_and(color_roi, color_roi, mask=binary_mask)
-                    color_image_with_object = color_frame.copy()
-                    color_image_with_object[ymin:ymax, xmin:xmax] = isolated_object
-                    cv2.imshow("Color Image with Object", color_image_with_object)
 
                     # center_x = (xmin + xmax) / 2
                     # center_y = (ymin + ymax) / 2
                     # depth_point = depth_frame[int(center_y), int(center_x)]
-                    # print("Depth Point:", depth_point)
+                    # print("Depqth Point:", depth_point)
                     # print(xyxy)
-                    yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
-                                            depth_frame, label='', color=(128, 128, 128), txt_color=(255, 255, 255),\
-                                            font=cv2.FONT_HERSHEY_COMPLEX)
-
+                    # yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
+                    #                         depth, label='Distance', color=(128, 128, 128), txt_color=(255, 255, 255),\
+                    #                         font=cv2.FONT_HERSHEY_COMPLEX)
+                    instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)
+                    print(instruction)
 
         elif mode == 'detecting':
             # Implement detecting functionality

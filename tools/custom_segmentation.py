@@ -23,10 +23,18 @@ def segment_object(depth_frame, bbox):
     # Apply Otsu's thresholding
     _, mask = cv2.threshold(roi_8bit, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-    # Optional: Apply morphological operations to clean up the mask
     kernel = np.ones((3, 3), np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    cleaned_mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    cleaned_mask = cv2.morphologyEx(cleaned_mask, cv2.MORPH_CLOSE, kernel)
 
-    return mask
+    # Compute average depth of the object
+    object_depth_values = np.where(cleaned_mask == 255, roi, 0)
+    nonzero_count = np.count_nonzero(object_depth_values)
+
+    if nonzero_count > 0:
+        average_depth = int(np.sum(object_depth_values) / nonzero_count)
+    else:
+        average_depth = None  # or set it to a default value
+
+    return cleaned_mask, average_depth
 
