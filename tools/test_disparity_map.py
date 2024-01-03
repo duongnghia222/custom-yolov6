@@ -2,6 +2,12 @@ import cv2
 import numpy as np
 import pyrealsense2 as rs
 
+# Mouse callback function
+def show_depth_value(event, x, y, flags, param):
+    if event == cv2.EVENT_MOUSEMOVE:
+        depth = depth_frame.get_distance(x, y)
+        print(f"Depth at pixel ({x}, {y}): {depth:.2f} meters")
+
 # Configure RealSense pipeline
 pipeline = rs.pipeline()
 config = rs.config()
@@ -9,6 +15,9 @@ config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 
 # Start streaming
 pipeline.start(config)
+
+cv2.namedWindow('Disparity Map')
+cv2.setMouseCallback('Disparity Map', show_depth_value)
 
 try:
     while True:
