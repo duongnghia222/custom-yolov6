@@ -19,20 +19,24 @@ def navigate_to_object(bbox, depth, color_frame):
 
 
     # Adjust threshold based on depth
-    base_threshold = 50
-    scaling_factor = 1000
-    dynamic_threshold = base_threshold + (scaling_factor / max(depth, 1))
+    middle_x = color_frame.shape[1] // 2
+    depth = depth//10
+    scale = 0.1
+    middle_diff = int(depth * scale)
 
-    # Draw dynamic threshold lines on the color frame
-    left_threshold = int(frame_center_x - dynamic_threshold)
-    right_threshold = int(frame_center_x + dynamic_threshold)
-    cv2.line(color_frame, (left_threshold, 0), (left_threshold, color_frame.shape[0]), (0, 255, 0), 2)  # Left line
-    cv2.line(color_frame, (right_threshold, 0), (right_threshold, color_frame.shape[0]), (0, 255, 0), 2)  # Right line
+    if middle_diff > 160:
+        middle_diff = 160
+    if middle_diff < 70:
+        middle_diff = 70
+    left_bound = middle_x - middle_diff
+    right_bound = middle_x + middle_diff
+    cv2.line(color_frame, (left_bound, 0), (left_bound, color_frame.shape[0]), (0, 255, 0), 2)  # Left line
+    cv2.line(color_frame, (right_bound, 0), (right_bound, color_frame.shape[0]), (0, 255, 0), 2)  # Right line
 
     # Determine the direction to move
-    if box_center_x < frame_center_x - dynamic_threshold:
+    if box_center_x < frame_center_x - middle_diff:
         direction = "turn left"
-    elif box_center_x > frame_center_x + dynamic_threshold:
+    elif box_center_x > frame_center_x + middle_diff:
         direction = "turn right"
     else:
         direction = "move forward"
