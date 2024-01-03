@@ -5,6 +5,7 @@ import time
 import cv2
 from tools.realsense_camera import *
 from tools.finger_count import FingersCount
+from tools.tracker import Tracker
 from tools.custom_inferer import Inferer
 from yolov6.utils.events import load_yaml
 
@@ -77,6 +78,8 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
                     center_y = (ymin + ymax) / 2
                     depth_point = depth_frame[int(center_y), int(center_x)]
                     print("Depth Point:", depth_point)
+                    print(depth_frame.shape[:2])
+                    print(color_frame.shape[:2])
                     # print(xyxy)
                     # yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
                     #                         depth_frame, label='', color=(128, 128, 128), txt_color=(255, 255, 255),\
@@ -130,9 +133,38 @@ if __name__ == "__main__":
     CLASS_NAMES = load_yaml(str(PATH_YOLOv6 / "data/coco.yaml"))['names']
     # Load the YOLOv6 model (choose the appropriate function based on the model size you want to use)\
     screen_width, screen_height = [720, 1280]
-    fc = FingersCount(screen_width, screen_height)
-    yolo = create_inferer()
-    run(fc, yolo, coco_yaml=CLASS_NAMES, custom_dataset_yaml=None)
+    # fc = FingersCount(screen_width, screen_height)
+    # yolo = create_inferer()
+    # run(fc, yolo, coco_yaml=CLASS_NAMES, custom_dataset_yaml=None)
+
+    video_capture = cv2.VideoCapture(0)
+
+    # Read the first frame
+    ok, frame = video_capture.read()
+
+    # Define a bounding box (x, y, width, height)
+    bbox = (100, 100, 50, 50)
+
+    # Create a Tracker instance
+    tracker = Tracker(type="KCF", frame=frame, bbox=bbox)
+
+    while True:
+        # Read a new frame from the webcam
+        ok, frame = video_capture.read()
+
+        # Track the object in the new frame
+        tracker.track(frame, bbox)
+
+        # Display the resulting frame
+        cv2.imshow('Object Tracking', frame)
+
+        # Exit if the user presses 'q'
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    # Release the video capture object and close the window
+    video_capture.release()
+    cv2.destroyAllWindows()
 
 
 

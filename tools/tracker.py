@@ -13,7 +13,7 @@ class Tracker:
             self.tracker.init(frame, bbox)
 
     def track(self, frame, bbox):
-        ok, bbox = self.tracker.update(self.frame)
+        ok, bbox = self.tracker.update(frame)
         if ok:
             # Tracking success: Draw the bounding box on the frame
             p1 = (int(bbox[0]), int(bbox[1]))
@@ -24,3 +24,6 @@ class Tracker:
         else:
             # Tracking failure: Handle the failure, e.g., reinitialize the tracker
             print("lost track, using yolo")
+
+
+
