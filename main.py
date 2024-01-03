@@ -19,6 +19,7 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
     last_gesture = None
     gesture_start = None
     detection = None
+    last_finder_call_time = None
     object_to_find = {"name": "cup", "conf_threshold": 0.1} # for debug, change to None after that
 
     while True:
@@ -63,10 +64,13 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
             elif time.time() - gesture_start >= 2 and not object_to_find:
                 object_to_find = finger_counts_mapping_obj(finger_counts)["name"]
             if object_to_find:
+                if last_finder_call_time is None:
+                    last_finder_call_time = time.time()
                 object_index = coco_yaml.index(object_to_find["name"])
                 print(f"Looking for: {object_to_find['name']} with index", object_index)
                 conf_threshold = object_to_find["conf_threshold"]
-                if detection is None:
+                if detection is None or (time.time() - last_finder_call_time >= 1):
+                    last_finder_call_time = time.time()
                     detection = yolo.object_finder(color_frame, object_index, predict_threshold=conf_threshold)
                     if detection is not None:
                         if len(detection) > 1:
@@ -80,6 +84,12 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
                     object_mask = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
                     print(object_mask)
                     cv2.imshow("Object Mask", object_mask)
+                    color_roi = color_frame[ymin:ymax, xmin:xmax]
+                    _, binary_mask = cv2.threshold(object_mask, 127, 255, cv2.THRESH_BINARY)
+                    isolated_object = cv2.bitwise_and(color_roi, color_roi, mask=binary_mask)
+                    color_image_with_object = color_frame.copy()
+                    color_image_with_object[ymin:ymax, xmin:xmax] = isolated_object
+                    cv2.imshow("Color Image with Object", color_image_with_object)
 
                     # center_x = (xmin + xmax) / 2
                     # center_y = (ymin + ymax) / 2
