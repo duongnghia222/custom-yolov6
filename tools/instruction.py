@@ -21,7 +21,13 @@ def navigate_to_object(bbox, depth, color_frame):
     # Adjust threshold based on depth
     middle_x = color_frame.shape[1] // 2
     scale = 7000
-    middle_diff = int((1/depth) * scale)
+    min_depth_threshold = 0.1  # Adjust this threshold based on your application's requirements
+
+    # Check if depth is too small or zero
+    if depth < min_depth_threshold:
+        middle_diff = color_frame.shape[1] // 2  # You need to define this default_value
+    else:
+        middle_diff = int((1 / depth) * scale)
 
     if middle_diff > 160:
         middle_diff = 160
