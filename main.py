@@ -21,7 +21,7 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
     gesture_start = None
     detection = None
     last_finder_call_time = None
-    object_to_find = {"name": "cup", "conf_threshold": 0.1} # for debug, change to None after that
+    object_to_find = {"name": "mouse", "conf_threshold": 0.1} # for debug, change to None after that
 
     while True:
         ret, color_frame, depth_frame = rs_camera.get_frame_stream()
@@ -81,9 +81,8 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
                 if detection is not None and len(detection):
                     *xyxy, conf, cls = detection
                     xmin, ymin, xmax, ymax = map(int, xyxy)  # Convert each element to an integer
-                    _, depth = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
-                    # object_mask = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
-                    # print(object_mask)
+                    object_mask, depth = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
+                    depth = depth / 100 # unit: cm
                     # cv2.imshow("Object Mask", object_mask)
                     # color_roi = color_frame[ymin:ymax, xmin:xmax]
                     # _, binary_mask = cv2.threshold(object_mask, 127, 255, cv2.THRESH_BINARY)
@@ -92,15 +91,11 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
                     # color_image_with_object[ymin:ymax, xmin:xmax] = isolated_object
                     # cv2.imshow("Color Image with Object", color_image_with_object)
 
-
-                    # center_x = (xmin + xmax) / 2
-                    # center_y = (ymin + ymax) / 2
-                    # depth_point = depth_frame[int(center_y), int(center_x)]
-                    # print("Depqth Point:", depth_point)
-                    # print(xyxy)
+                    #
                     # yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
                     #                         depth, label='Distance', color=(128, 128, 128), txt_color=(255, 255, 255),\
                     #                         font=cv2.FONT_HERSHEY_COMPLEX)
+                    print("distance", depth)
                     instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)
                     print(instruction)
 

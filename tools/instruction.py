@@ -20,9 +20,8 @@ def navigate_to_object(bbox, depth, color_frame):
 
     # Adjust threshold based on depth
     middle_x = color_frame.shape[1] // 2
-    depth = depth//10
-    scale = 0.1
-    middle_diff = int(depth * scale)
+    scale = 7000
+    middle_diff = int((1/depth) * scale)
 
     if middle_diff > 160:
         middle_diff = 160
@@ -30,13 +29,14 @@ def navigate_to_object(bbox, depth, color_frame):
         middle_diff = 70
     left_bound = middle_x - middle_diff
     right_bound = middle_x + middle_diff
+    print(middle_diff)
     cv2.line(color_frame, (left_bound, 0), (left_bound, color_frame.shape[0]), (0, 255, 0), 2)  # Left line
     cv2.line(color_frame, (right_bound, 0), (right_bound, color_frame.shape[0]), (0, 255, 0), 2)  # Right line
 
     # Determine the direction to move
-    if box_center_x < frame_center_x - middle_diff:
+    if box_center_x < middle_x - middle_diff:
         direction = "turn left"
-    elif box_center_x > frame_center_x + middle_diff:
+    elif box_center_x > middle_x + middle_diff:
         direction = "turn right"
     else:
         direction = "move forward"
@@ -47,6 +47,5 @@ def navigate_to_object(bbox, depth, color_frame):
         instruction = "stop"
     else:
         instruction = f"{direction}"
-
 
     return instruction
