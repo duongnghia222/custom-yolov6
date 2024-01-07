@@ -1,5 +1,6 @@
 import pyttsx3
 
+
 def speak(text):
     try:
         # Initialize the text-to-speech engine

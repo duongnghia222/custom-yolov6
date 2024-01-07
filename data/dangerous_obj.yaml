@@ -1,0 +1,7 @@
+train: ./data/images/train
+val: ./data/images/valid
+test: ./data/images/test
+
+is_coco: False
+nc: 16
+names: ['bench', 'bus', 'car', 'cng', 'dog', 'downstair', 'garbage bin', 'motorcycle', 'obstacle', 'person', 'pole', 'pothole', 'rickshaw', 'tree', 'truck', 'upstair']

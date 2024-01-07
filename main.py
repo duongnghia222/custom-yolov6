@@ -16,11 +16,11 @@ from tools.custom_inferer import Inferer
 from yolov6.utils.events import load_yaml
 
 
-def run(fc, yolo, voice, coco_yaml, custom_dataset_yaml):
+def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
     rs_camera = RealsenseCamera()
     print("Starting RealSense camera detection. Press 'q' to quit.")
 
-    mode = 'finding' # for debug, change to disabled after that
+    mode = 'detecting' # for debug, change to disabled after that
     last_gesture = None
     gesture_start = None
     detection = None
@@ -107,7 +107,21 @@ def run(fc, yolo, voice, coco_yaml, custom_dataset_yaml):
 
         elif mode == 'detecting':
             # Implement detecting functionality
-            print("Detecting mode")
+            dangerous_obj = custom_model.dangerous_object_detection(color_frame)
+            if dangerous_obj is not None and len(dangerous_obj) > 1:
+                dangerous_obj = dangerous_obj[0]
+            dangerous_obj = dangerous_obj.flatten()
+            if dangerous_obj is not None and len(dangerous_obj):
+                *xyxy, conf, cls = dangerous_obj
+                # [285, 194, 394, 298]
+                xmin, ymin, xmax, ymax = map(int, xyxy)  # Convert each element to an integer
+                object_mask, depth = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
+
+                yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
+                                        depth, label='Distance', color=(128, 128, 128), txt_color=(255, 255, 255),\
+                                        font=cv2.FONT_HERSHEY_COMPLEX)
+                # instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)
+                # voice.speak(instruction)
 
         cv2.imshow('RealSense Camera Detection', color_frame)
 
@@ -151,11 +165,14 @@ if __name__ == "__main__":
     PATH_YOLOv6 = pathlib.Path(__file__).parent
     DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     CLASS_NAMES = load_yaml(str(PATH_YOLOv6 / "data/coco.yaml"))['names']
+    DANGEROUS_CLASS_NAMES = load_yaml(str(PATH_YOLOv6 / "data/dangerous.yaml"))['names']
+
     # Load the YOLOv6 model (choose the appropriate function based on the model size you want to use)\
     screen_width, screen_height = [720, 1280]
     fc = FingersCount(screen_width, screen_height)
     yolo = create_inferer()
-    run(fc, yolo, voice, coco_yaml=CLASS_NAMES, custom_dataset_yaml=None)
+    custom_model = create_inferer(weights='dangerous_obj.pt', yaml='data/dangerous_obj.yaml')
+    run(fc, yolo, custom_model, voice, coco_yaml=CLASS_NAMES, custom_dataset_yaml=DANGEROUS_CLASS_NAMES)
 
 
 
