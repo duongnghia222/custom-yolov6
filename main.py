@@ -3,16 +3,20 @@ import torch
 import os
 import time
 import cv2
-from tools.realsense_camera import *
+import threading
 from tools.finger_count import FingersCount
 from tools.tracker import Tracker
 from tools.instruction import navigate_to_object
+from tools.test_pyttx3 import speak
+from tools.voice_navigator import TextToSpeech
+voice = TextToSpeech()
+from tools.realsense_camera import *
 from tools.custom_segmentation import segment_object
 from tools.custom_inferer import Inferer
 from yolov6.utils.events import load_yaml
 
 
-def run(fc, yolo, coco_yaml, custom_dataset_yaml):
+def run(fc, yolo, voice, coco_yaml, custom_dataset_yaml):
     rs_camera = RealsenseCamera()
     print("Starting RealSense camera detection. Press 'q' to quit.")
 
@@ -99,7 +103,7 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
                     print("distance", depth)
 
                     instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)
-                    print(instruction)
+                    voice.speak(instruction)
 
         elif mode == 'detecting':
             # Implement detecting functionality
@@ -143,6 +147,7 @@ def create_inferer(weights='yolov6s_mbla.pt',
 
 
 if __name__ == "__main__":
+    speak("Please wait for system to start")
     PATH_YOLOv6 = pathlib.Path(__file__).parent
     DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     CLASS_NAMES = load_yaml(str(PATH_YOLOv6 / "data/coco.yaml"))['names']
@@ -150,7 +155,7 @@ if __name__ == "__main__":
     screen_width, screen_height = [720, 1280]
     fc = FingersCount(screen_width, screen_height)
     yolo = create_inferer()
-    run(fc, yolo, coco_yaml=CLASS_NAMES, custom_dataset_yaml=None)
+    run(fc, yolo, voice, coco_yaml=CLASS_NAMES, custom_dataset_yaml=None)
 
 
 
