@@ -48,7 +48,7 @@ def navigate_to_object(bbox, depth, color_frame):
         direction = "move forward"
 
     # Incorporate depth information for distance
-    minimum_safe_distance = 50  # Define this based on your requirements
+    minimum_safe_distance = 10  # Define this based on your requirements
     if depth < minimum_safe_distance:
         instruction = "stop"
     else:

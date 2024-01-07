@@ -21,7 +21,7 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
     gesture_start = None
     detection = None
     last_finder_call_time = None
-    object_to_find = {"name": "bottle", "conf_threshold": 0.5} # for debug, change to None after that
+    object_to_find = {"name": "cup", "conf_threshold": 0.5} # for debug, change to None after that
     # object_to_find = None
 
     while True:
@@ -68,7 +68,7 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
                 if last_finder_call_time is None:
                     last_finder_call_time = time.time()
                 object_index = coco_yaml.index(object_to_find["name"])
-                # print(f"Looking for: {object_to_find['name']} with index", object_index)
+                # print(f"Looking for: {objec   t_to_find['name']} with index", object_index)
                 conf_threshold = object_to_find["conf_threshold"]
                 if detection is None or (time.time() - last_finder_call_time >= 1):
                     last_finder_call_time = time.time()
@@ -80,22 +80,22 @@ def run(fc, yolo, coco_yaml, custom_dataset_yaml):
 
                 if detection is not None and len(detection):
                     *xyxy, conf, cls = detection
+                    #[285, 194, 394, 298]
                     xmin, ymin, xmax, ymax = map(int, xyxy)  # Convert each element to an integer
                     object_mask, depth = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
                     # cv2.imshow("Object Mask", object_mask)
-                    color_roi = color_frame[ymin:ymax, xmin:xmax]
-                    _, binary_mask = cv2.threshold(object_mask, 127, 255, cv2.THRESH_BINARY)
-                    binary_mask_8bit = binary_mask.astype(np.uint8)
-
-                    isolated_object = cv2.bitwise_and(color_roi, color_roi, mask=binary_mask_8bit)
-                    color_image_with_object = color_frame.copy()
-                    color_image_with_object[ymin:ymax, xmin:xmax] = isolated_object
-                    cv2.imshow("Color Image with Object", color_image_with_object)
-
-
-                    yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
-                                            depth, label='Distance', color=(128, 128, 128), txt_color=(255, 255, 255),\
-                                            font=cv2.FONT_HERSHEY_COMPLEX)
+                    # color_roi = color_frame[ymin:ymax, xmin:xmax]
+                    # _, binary_mask = cv2.threshold(object_mask, 127, 255, cv2.THRESH_BINARY)
+                    #
+                    # isolated_object = cv2.bitwise_and(color_roi, color_roi, mask=binary_mask)
+                    # color_image_with_object = color_frame.copy()
+                    # color_image_with_object[ymin:ymax, xmin:xmax] = isolated_object
+                    # cv2.imshow("Color Image with Object", color_image_with_object)
+                    #
+                    #
+                    # yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
+                    #                         depth, label='Distance', color=(128, 128, 128), txt_color=(255, 255, 255),\
+                    #                         font=cv2.FONT_HERSHEY_COMPLEX)
                     print("distance", depth)
 
                     instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)

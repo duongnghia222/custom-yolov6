@@ -16,8 +16,9 @@ def mouse_event_handler(event, x, y, flags, param):
     if event == cv2.EVENT_MOUSEMOVE and depth_frame:
         # Get depth value at mouse position
         depth = depth_frame.get_distance(x, y)
-        distance = f"Distance: {depth:.2f} meters"
-        param['text'] = distance
+        distance = f"{depth:.2f}"
+        position = f"({x}, {y})"
+        param['text'] = distance + ", " + position
 
 cv2.namedWindow('Color Frame')
 color_image = None
