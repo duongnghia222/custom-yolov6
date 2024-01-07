@@ -27,4 +27,4 @@ def segment_object(depth_frame, bbox):
     else:
         average_depth = None
 
-    return mask.astype(np.uint8) * 255, average_depth  # Convert mask to 8-bit format
+    return mask.astype(np.uint8) * 255, int(average_depth)  # Convert mask to 8-bit format

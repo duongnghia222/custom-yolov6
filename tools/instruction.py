@@ -8,33 +8,26 @@ def navigate_to_object(bbox, depth, color_frame):
 
     Parameters:
     bbox (list): A list containing the bounding box coordinates [xmin, ymin, xmax, ymax].
-    depth (float): The depth of the object from the camera.
+    depth (float): The depth of the object from the camera. (unit: mm)
 
     Returns:
     str: Navigation instruction ('turn left', 'turn right', 'move forward', or 'stop').
     """
     xmin, ymin, xmax, ymax = bbox
     box_center_x = int((xmin + xmax) / 2)
-    frame_center_x = int(color_frame.shape[1] / 2)
 
 
     # Adjust threshold based on depth
     middle_x = color_frame.shape[1] // 2
-    scale = 7000
-    min_depth_threshold = 0.1  # Adjust this threshold based on your application's requirements
-
-    # Check if depth is too small or zero
-    if depth < min_depth_threshold:
-        middle_diff = color_frame.shape[1] // 2  # You need to define this default_value
-    else:
-        middle_diff = int((1 / depth) * scale)
+    scale = 80000
+    middle_diff = (1/(depth+1))*scale
 
     if middle_diff > 160:
         middle_diff = 160
     if middle_diff < 70:
         middle_diff = 70
-    left_bound = middle_x - middle_diff
-    right_bound = middle_x + middle_diff
+    left_bound = int(max(min(middle_x - middle_diff, color_frame.shape[1]), 0))
+    right_bound = int(max(min(middle_x + middle_diff, color_frame.shape[1]), 0))
     print(middle_diff)
     cv2.line(color_frame, (left_bound, 0), (left_bound, color_frame.shape[0]), (0, 255, 0), 2)  # Left line
     cv2.line(color_frame, (right_bound, 0), (right_bound, color_frame.shape[0]), (0, 255, 0), 2)  # Right line
