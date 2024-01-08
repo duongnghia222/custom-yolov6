@@ -92,7 +92,7 @@ class Inferer:
             det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
             return det
 
-    def dangerous_object_detection(self, color_img):
+    def dangerous_object_detection(self, color_img, conf_threshold):
         img, img_src = self.process_image(color_img, self.img_size, self.stride, self.half)
         img = img.to(self.device)
         if len(img.shape) == 3:
@@ -100,7 +100,7 @@ class Inferer:
             # expand for batch dim
         t1 = time.time()
         predict_results = self.model(img)
-        det = non_max_suppression(prediction=predict_results, iou_thres=self.iou_threshold,
+        det = non_max_suppression(prediction=predict_results, conf_thres=conf_threshold, iou_thres=self.iou_threshold,
                                   agnostic=self.agnostic_nms, max_det=self.max_det)[0]
         t2 = time.time()
         gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh

@@ -107,12 +107,19 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
 
         elif mode == 'detecting':
             # Implement detecting functionality
-            dangerous_obj = custom_model.dangerous_object_detection(color_frame)
-            if dangerous_obj is not None and len(dangerous_obj) > 1:
-                dangerous_obj = dangerous_obj[0]
-            dangerous_obj = dangerous_obj.flatten()
+            dangerous_obj = custom_model.dangerous_object_detection(color_frame, conf_threshold=0.5)
+            if dangerous_obj is not None:
+                if len(dangerous_obj) > 1:
+                    dangerous_obj = dangerous_obj[0]
+                dangerous_obj = dangerous_obj.flatten()
             if dangerous_obj is not None and len(dangerous_obj):
                 *xyxy, conf, cls = dangerous_obj
+                if isinstance(cls, torch.Tensor):
+                    if cls.nelement() == 1:
+                        cls = int(cls.item())
+
+
+                print(DANGEROUS_CLASS_NAMES[cls])
                 # [285, 194, 394, 298]
                 xmin, ymin, xmax, ymax = map(int, xyxy)  # Convert each element to an integer
                 object_mask, depth = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
@@ -120,8 +127,17 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
                 yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
                                         depth, label='Distance', color=(128, 128, 128), txt_color=(255, 255, 255),\
                                         font=cv2.FONT_HERSHEY_COMPLEX)
-                # instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)
-                # voice.speak(instruction)
+                instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)
+                if instruction == "move forward":
+                    instruction = "front"
+                elif instruction == "turn left":
+                    instruction = "right"
+                elif instruction == "turn right":
+                    instruction = "left"
+                elif instruction == "stop":
+                    instruction = "very front"
+                guide = DANGEROUS_CLASS_NAMES[cls] + "on the" + instruction + str(depth) + "centimeters away"
+                voice.speak(guide)
 
         cv2.imshow('RealSense Camera Detection', color_frame)
 
@@ -165,7 +181,7 @@ if __name__ == "__main__":
     PATH_YOLOv6 = pathlib.Path(__file__).parent
     DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     CLASS_NAMES = load_yaml(str(PATH_YOLOv6 / "data/coco.yaml"))['names']
-    DANGEROUS_CLASS_NAMES = load_yaml(str(PATH_YOLOv6 / "data/dangerous.yaml"))['names']
+    DANGEROUS_CLASS_NAMES = load_yaml(str(PATH_YOLOv6 / "data/dangerous_obj.yaml"))['names']
 
     # Load the YOLOv6 model (choose the appropriate function based on the model size you want to use)\
     screen_width, screen_height = [720, 1280]
