@@ -16,11 +16,11 @@ from tools.custom_inferer import Inferer
 from yolov6.utils.events import load_yaml
 
 
-def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
+def run(fc, voice, coco_yaml, custom_dataset_yaml):
     rs_camera = RealsenseCamera()
     print("Starting RealSense camera detection. Press 'q' to quit.")
-
-    mode = 'detecting' # for debug, change to disabled after that
+    model = None
+    mode = 'finding' # for debug, change to disabled after that
     last_gesture = None
     gesture_start = None
     detection = None
@@ -47,14 +47,17 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
                 if finger_counts == [0, 0]:
                     mode = 'disabled'
                     object_to_find = None
+                    model = None
                     print("All modes disabled.")
                 elif finger_counts == [0, 1]:
                     mode = 'finding'
                     object_to_find = None
+                    model = create_inferer()
                     print("Finding mode activated.")
                 elif finger_counts == [0, 2]:
                     mode = 'detecting'
                     object_to_find = None
+                    model = create_inferer(weights='dangerous_obj.pt', yaml='data/dangerous_obj.yaml')
                     print("Detecting mode activated.")
                 elif finger_counts == [0, 5]:
                     print("Program stopping...")
@@ -167,7 +170,7 @@ def create_inferer(weights='yolov6s_mbla.pt',
         view_img=True,
         classes=None,
         agnostic_nms=False,
-        project='runs/inference',
+        project='runs/infereqnce',
         name='exp',
         hide_labels=False,
         hide_conf=False,
@@ -188,7 +191,7 @@ if __name__ == "__main__":
     fc = FingersCount(screen_width, screen_height)
     yolo = create_inferer()
     custom_model = create_inferer(weights='dangerous_obj.pt', yaml='data/dangerous_obj.yaml')
-    run(fc, yolo, custom_model, voice, coco_yaml=CLASS_NAMES, custom_dataset_yaml=DANGEROUS_CLASS_NAMES)
+    run(fc, voice, coco_yaml=CLASS_NAMES, custom_dataset_yaml=DANGEROUS_CLASS_NAMES)
 
 
 

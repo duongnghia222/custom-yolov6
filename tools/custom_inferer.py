@@ -33,6 +33,7 @@ class Inferer:
         self.img_size = img_size
         cuda = self.device != 'cpu' and torch.cuda.is_available()
         self.device = torch.device(f'cuda:{device}' if cuda else 'cpu')
+        print(self.device)
         self.model = DetectBackend(weights, device=self.device)
         self.stride = self.model.stride
         self.class_names = load_yaml(yaml)['names']
