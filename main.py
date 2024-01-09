@@ -19,7 +19,7 @@ from yolov6.utils.events import load_yaml
 def run(fc, voice, coco_yaml, custom_dataset_yaml):
     rs_camera = RealsenseCamera()
     print("Starting RealSense camera detection. Press 'q' to quit.")
-    model = None
+    model = create_inferer()
     mode = 'finding' # for debug, change to disabled after that
     last_gesture = None
     gesture_start = None
@@ -79,7 +79,7 @@ def run(fc, voice, coco_yaml, custom_dataset_yaml):
                 conf_threshold = object_to_find["conf_threshold"]
                 if detection is None or (time.time() - last_finder_call_time >= 1):
                     last_finder_call_time = time.time()
-                    detection = yolo.object_finder(color_frame, object_index, predict_threshold=conf_threshold)
+                    detection = model.object_finder(color_frame, object_index, predict_threshold=conf_threshold)
                     if detection is not None:
                         if len(detection) > 1:
                             detection = detection[0]
@@ -110,7 +110,7 @@ def run(fc, voice, coco_yaml, custom_dataset_yaml):
 
         elif mode == 'detecting':
             # Implement detecting functionality
-            dangerous_obj = custom_model.dangerous_object_detection(color_frame, conf_threshold=0.5)
+            dangerous_obj = model.dangerous_object_detection(color_frame, conf_threshold=0.5)
             if dangerous_obj is not None:
                 if len(dangerous_obj) > 1:
                     dangerous_obj = dangerous_obj[0]
@@ -127,7 +127,7 @@ def run(fc, voice, coco_yaml, custom_dataset_yaml):
                 xmin, ymin, xmax, ymax = map(int, xyxy)  # Convert each element to an integer
                 object_mask, depth = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
 
-                yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
+                model.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
                                         depth, label='Distance', color=(128, 128, 128), txt_color=(255, 255, 255),\
                                         font=cv2.FONT_HERSHEY_COMPLEX)
                 instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)
@@ -189,8 +189,8 @@ if __name__ == "__main__":
     # Load the YOLOv6 model (choose the appropriate function based on the model size you want to use)\
     screen_width, screen_height = [720, 1280]
     fc = FingersCount(screen_width, screen_height)
-    yolo = create_inferer()
-    custom_model = create_inferer(weights='dangerous_obj.pt', yaml='data/dangerous_obj.yaml')
+    # yolo = create_inferer()
+    # custom_model = create_inferer(weights='dangerous_obj.pt', yaml='data/dangerous_obj.yaml')
     run(fc, voice, coco_yaml=CLASS_NAMES, custom_dataset_yaml=DANGEROUS_CLASS_NAMES)
 
 
