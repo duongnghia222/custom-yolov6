@@ -52,6 +52,8 @@ def run(fc, voice, coco_yaml, custom_dataset_yaml):
                 elif finger_counts == [0, 1]:
                     mode = 'finding'
                     object_to_find = None
+                    finger_counts = None
+                    print("loaded")
                     model = create_inferer()
                     print("Finding mode activated.")
                 elif finger_counts == [0, 2]:
@@ -70,7 +72,9 @@ def run(fc, voice, coco_yaml, custom_dataset_yaml):
                 last_gesture = finger_counts
                 gesture_start = time.time()
             elif time.time() - gesture_start >= 2 and not object_to_find:
-                object_to_find = finger_counts_mapping_obj(finger_counts)["name"]
+                # print(finger_counts)
+                # print(finger_counts_mapping_obj(finger_counts))
+                object_to_find = finger_counts_mapping_obj(finger_counts)
             if object_to_find:
                 if last_finder_call_time is None:
                     last_finder_call_time = time.time()

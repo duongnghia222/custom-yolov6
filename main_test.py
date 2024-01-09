@@ -20,7 +20,7 @@ def run(fc, voice, coco_yaml, custom_dataset_yaml):
     webcam = cv2.VideoCapture(0)
     print("Starting RealSense camera detection. Press 'q' to quit.")
     model = create_inferer()
-    mode = 'finding' # for debug, change to disabled after that
+    mode = 'disabled' # for debug, change to disabled after that
     last_gesture = None
     gesture_start = None
     detection = None
@@ -52,6 +52,7 @@ def run(fc, voice, coco_yaml, custom_dataset_yaml):
                 elif finger_counts == [0, 1]:
                     mode = 'finding'
                     object_to_find = None
+                    print("loaded")
                     model = create_inferer()
                     print("Finding mode activated.")
                 elif finger_counts == [0, 2]:
