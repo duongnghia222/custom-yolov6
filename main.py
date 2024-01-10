@@ -19,13 +19,13 @@ from yolov6.utils.events import load_yaml
 def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
     rs_camera = RealsenseCamera()
     print("Starting RealSense camera detection. Press 'q' to quit.")
-    mode = 'disabled' # for debug, change to disabled after that
+    mode = 'finding' # for debug, change to disabled after that
     last_gesture = None
     gesture_start = None
     detection = None
     last_finder_call_time = None
-    # object_to_find = {"name": "cup", "conf_threshold": 0.5} # for debug, change to None after that
-    object_to_find = None
+    object_to_find = {"name": "cup", "conf_threshold": 0.5} # for debug, change to None after that
+    # object_to_find = None
 
     while True:
         ret, color_frame, depth_frame = rs_camera.get_frame_stream()
@@ -73,38 +73,42 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
                 if last_finder_call_time is None:
                     last_finder_call_time = time.time()
                 object_index = coco_yaml.index(object_to_find["name"])
-                print(f"Looking for: {object_to_find['name']} with index", object_index)
+                # print(f"Looking for: {object_to_find['name']} with index", object_index)
                 conf_threshold = object_to_find["conf_threshold"]
-                if detection is None or (time.time() - last_finder_call_time >= 1):
+
+                if detection is None or (time.time() - last_finder_call_time >= 2):
                     last_finder_call_time = time.time()
                     detection = yolo.object_finder(color_frame, object_index, predict_threshold=conf_threshold)
+                    print(detection)
                     if detection is not None:
                         if len(detection) > 1:
                             detection = detection[0]
                         detection = detection.flatten()
 
-                if detection is not None and len(detection):
-                    *xyxy, conf, cls = detection
-                    #[285, 194, 394, 298]
-                    xmin, ymin, xmax, ymax = map(int, xyxy)  # Convert each element to an integer
-                    object_mask, depth = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
-                    # cv2.imshow("Object Mask", object_mask)
-                    # color_roi = color_frame[ymin:ymax, xmin:xmax]
-                    # _, binary_mask = cv2.threshold(object_mask, 127, 255, cv2.THRESH_BINARY)
-                    #
-                    # isolated_object = cv2.bitwise_and(color_roi, color_roi, mask=binary_mask)
-                    # color_image_with_object = color_frame.copy()
-                    # color_image_with_object[ymin:ymax, xmin:xmax] = isolated_object
-                    # cv2.imshow("Color Image with Object", color_image_with_object)
-                    #
-                    #
-                    # yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
-                    #                         depth, label='Distance', color=(128, 128, 128), txt_color=(255, 255, 255),\
-                    #                         font=cv2.FONT_HERSHEY_COMPLEX)
-                    print("distance", depth)
-
-                    instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)
-                    voice.speak(instruction)
+                # if detection is not None and len(detection):
+                #     print("detected")
+                #     *xyxy, conf, cls = detection
+                #     #[285, 194, 394, 298]
+                #     xmin, ymin, xmax, ymax = map(int, xyxy)  # Convert each element to an integer
+                #     object_mask, depth = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
+                #     # cv2.imshow("Object Mask", object_mask)
+                #     # color_roi = color_frame[ymin:ymax, xmin:xmax]
+                #     # _, binary_mask = cv2.threshold(object_mask, 127, 255, cv2.THRESH_BINARY)
+                #     #
+                #     # isolated_object = cv2.bitwise_and(color_roi, color_roi, mask=binary_mask)
+                #     # color_image_with_object = color_frame.copy()
+                #     # color_image_with_object[ymin:ymax, xmin:xmax] = isolated_object
+                #     # cv2.imshow("Color Image with Object", color_image_with_object)
+                #     #
+                #     #
+                #     # yolo.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
+                #     #                         depth, label='Distance', color=(128, 128, 128), txt_color=(255, 255, 255),\
+                #     #                         font=cv2.FONT_HERSHEY_COMPLEX)
+                #     print("distance", depth)
+                #
+                #     instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)
+                #     print(instruction)
+                    # voice.speak(instruction)
 
         elif mode == 'detecting':
             # Implement detecting functionality
@@ -138,7 +142,7 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
                 elif instruction == "stop":
                     instruction = "very front"
                 guide = DANGEROUS_CLASS_NAMES[cls] + "on the" + instruction + str(depth) + "centimeters away"
-                voice.speak(guide)
+                # voice.speak(guide)
 
         cv2.imshow('RealSense Camera Detection', color_frame)
 
@@ -187,7 +191,7 @@ if __name__ == "__main__":
     # Load the YOLOv6 model (choose the appropriate function based on the model size you want to use)\
     screen_width, screen_height = [720, 1280]
     fc = FingersCount(screen_width, screen_height)
-    yolo = create_inferer()
+    yolo = create_inferer(weights='yolov6m.pt')
     custom_model = create_inferer(weights='dangerous_obj.pt', yaml='data/dangerous_obj.yaml')
     run(fc, yolo, custom_model, voice, coco_yaml=CLASS_NAMES, custom_dataset_yaml=DANGEROUS_CLASS_NAMES)
 

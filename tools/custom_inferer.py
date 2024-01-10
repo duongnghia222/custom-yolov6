@@ -20,8 +20,6 @@ from yolov6.data.datasets import LoadData
 from yolov6.utils.nms import non_max_suppression
 
 
-
-
 class Inferer:
     def __init__(self, weights, device, yaml, img_size, half,
                  conf_threshold, iou_threshold, agnostic_nms, max_det, view_img=True):
@@ -81,8 +79,8 @@ class Inferer:
             # expand for batch dim
         t1 = time.time()
         predict_results = self.model(img)
-        det = non_max_suppression(predict_results, predict_threshold, self.iou_threshold, class_num,
-                                  self.agnostic_nms, max_det=self.max_det)[0]
+        det = non_max_suppression(prediction=predict_results, conf_thres=predict_threshold, iou_thres=self.iou_threshold,
+                                  classes=class_num, agnostic=self.agnostic_nms, max_det=self.max_det)[0]
         t2 = time.time()
         gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
         img_ori = img_src.copy()
