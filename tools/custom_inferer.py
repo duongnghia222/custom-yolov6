@@ -21,8 +21,7 @@ from yolov6.utils.nms import non_max_suppression
 
 
 class Inferer:
-    def __init__(self, weights, device, yaml, img_size, half,
-                 conf_threshold, iou_threshold, agnostic_nms, max_det, view_img=True):
+    def __init__(self,weights, device, yaml, img_size, half):
 
         self.__dict__.update(locals())
 
@@ -31,11 +30,9 @@ class Inferer:
         self.img_size = img_size
         cuda = self.device != 'cpu' and torch.cuda.is_available()
         self.device = torch.device(f'cuda:{device}' if cuda else 'cpu')
-        print(self.device)
         self.model = DetectBackend(weights, device=self.device)
         self.stride = self.model.stride
         self.class_names = load_yaml(yaml)['names']
-        # self.custom_class_names = load_yaml(yaml)['custom_names']
         self.img_size = self.check_img_size(self.img_size, s=self.stride)  # check image size
         self.half = half
 
@@ -50,12 +47,8 @@ class Inferer:
             self.half = False
 
         if self.device.type != 'cpu':
-            self.model(torch.zeros(1, 3, *self.img_size).to(self.device).type_as(next(self.model.model.parameters())))  # warmup
-        self.conf_threshold = conf_threshold
-        self.iou_threshold = iou_threshold
-        self.agnostic_nms = agnostic_nms
-        self.max_det = max_det
-        self.view_img = view_img
+            self.model(torch.zeros(1, 3, *self.img_size).to(self.device).type_as(
+                next(self.model.model.parameters())))  # warmup
 
 
 
@@ -79,8 +72,8 @@ class Inferer:
             # expand for batch dim
         t1 = time.time()
         predict_results = self.model(img)
-        det = non_max_suppression(prediction=predict_results, conf_thres=predict_threshold, iou_thres=self.iou_threshold,
-                                  classes=class_num, agnostic=self.agnostic_nms, max_det=self.max_det)[0]
+        det = non_max_suppression(prediction=predict_results, conf_thres=predict_threshold,
+                                  classes=class_num)[0]
         t2 = time.time()
         gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
         img_ori = img_src.copy()
@@ -111,7 +104,9 @@ class Inferer:
             det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
             return det
 
-    def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf, view_img=True):
+    def infer(self, conf_thres=0.4, iou_thres=0.45, classes=None, agnostic_nms=False,
+              max_det=1000, save_dir=None, save_txt=False, save_img=False, hide_labels=False,
+              hide_conf=False, view_img=True):
         ''' Model Inference and results visualization '''
         vid_path, vid_writer, windows = None, None, []
         fps_calculator = CalcFPS()

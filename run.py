@@ -6,9 +6,9 @@ from yolov6.utils.events import LOGGER
 from yolov6.core.inferer import Inferer
 
 @torch.no_grad()
-def run(weights='yolov6s_mbla.pt',
+def run(weights='yolov6s.pt',
         source='data/images',
-        webcam=False,
+        webcam=True,
         webcam_addr='0',
         use_depth_cam=True,
         yaml='data/coco.yaml',
@@ -42,8 +42,9 @@ def run(weights='yolov6s_mbla.pt',
         os.makedirs(save_dir)
 
     # Initialize inference
-    inferer = Inferer(source, webcam, webcam_addr, use_depth_cam, weights, device, yaml, img_size, half)
-    inferer.infer(conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, not not_save_img, hide_labels, hide_conf, view_img)
+    inferer = Inferer(source, webcam, webcam_addr, weights, device, yaml, img_size, half)
+    inferer.infer(conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, not not_save_img,
+                  hide_labels, hide_conf, view_img)
 
     # Log results
     if save_txt or not not_save_img:

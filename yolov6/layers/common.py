@@ -551,8 +551,8 @@ class LinearAddBlock(nn.Module):
 class DetectBackend(nn.Module):
     def __init__(self, weights='yolov6s_mbla.pt', device=None, dnn=True):
         super().__init__()
-        if not os.path.exists(weights):
-            download_ckpt(weights) # try to download model from github automatically.
+        # if not os.path.exists(weights):
+        #     download_ckpt(weights) # try to download model from github automatically.
         assert isinstance(weights, str) and Path(weights).suffix == '.pt', f'{Path(weights).suffix} format is not supported.'
         from yolov6.utils.checkpoint import load_checkpoint
         model = load_checkpoint(weights, map_location=device)

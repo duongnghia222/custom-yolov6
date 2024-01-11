@@ -4,6 +4,7 @@ import argparse
 import os
 import sys
 import os.path as osp
+
 import torch
 
 ROOT = os.getcwd()
@@ -16,11 +17,10 @@ from yolov6.core.inferer import Inferer
 
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Inference.', add_help=add_help)
-    parser.add_argument('--weights', type=str, default='weights/yolov6s_mbla.pt', help='model path(s) for inference.')
+    parser.add_argument('--weights', type=str, default='weights/yolov6s.pt', help='model path(s) for inference.')
     parser.add_argument('--source', type=str, default='data/images', help='the source path, e.g. image-file/dir.')
     parser.add_argument('--webcam', action='store_true', help='whether to use webcam.')
     parser.add_argument('--webcam-addr', type=str, default='0', help='the web camera address, local camera or rtsp address.')
-    parser.add_argument('--use_depth_cam', action='store_true', help='use depth camera')
     parser.add_argument('--yaml', type=str, default='data/coco.yaml', help='data yaml file.')
     parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='the image-size(h,w) in inference size.')
     parser.add_argument('--conf-thres', type=float, default=0.4, help='confidence threshold for inference.')
@@ -45,11 +45,10 @@ def get_args_parser(add_help=True):
 
 
 @torch.no_grad()
-def run(weights=osp.join(ROOT, 'yolov6s_mbla.pt'),
+def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         source=osp.join(ROOT, 'data/images'),
         webcam=False,
         webcam_addr=0,
-        use_depth_cam = True,
         yaml=None,
         img_size=640,
         conf_thres=0.4,
@@ -72,7 +71,7 @@ def run(weights=osp.join(ROOT, 'yolov6s_mbla.pt'),
     Args:
         weights: The path of model.pt, e.g. yolov6s.pt
         source: Source path, supporting image files or dirs containing images.
-        yaml: Data yaml file,
+        yaml: Data yaml file, .
         img_size: Inference image-size, e.g. 640
         conf_thres: Confidence threshold in inference, e.g. 0.25
         iou_thres: NMS IOU threshold in inference, e.g. 0.45
@@ -105,7 +104,7 @@ def run(weights=osp.join(ROOT, 'yolov6s_mbla.pt'),
             os.makedirs(save_txt_path)
 
     # Inference
-    inferer = Inferer(source, webcam, webcam_addr, use_depth_cam, weights, device, yaml, img_size, half)
+    inferer = Inferer(source, webcam, webcam_addr, weights, device, yaml, img_size, half)
     inferer.infer(conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, not not_save_img, hide_labels, hide_conf, view_img)
 
     if save_txt or not not_save_img:

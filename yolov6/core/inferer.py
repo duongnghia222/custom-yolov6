@@ -20,10 +20,8 @@ from yolov6.data.datasets import LoadData
 from yolov6.utils.nms import non_max_suppression
 from yolov6.utils.torch_utils import get_model_info
 
-
-
 class Inferer:
-    def __init__(self, source, webcam, webcam_addr, use_depth_cam, weights, device, yaml, img_size, half):
+    def __init__(self, source, webcam, webcam_addr, weights, device, yaml, img_size, half):
 
         self.__dict__.update(locals())
 
@@ -35,7 +33,6 @@ class Inferer:
         self.model = DetectBackend(weights, device=self.device)
         self.stride = self.model.stride
         self.class_names = load_yaml(yaml)['names']
-        self.custom_class_names = load_yaml(yaml)['custom_names']
         self.img_size = self.check_img_size(self.img_size, s=self.stride)  # check image size
         self.half = half
 
@@ -55,13 +52,8 @@ class Inferer:
         # Load data
         self.webcam = webcam
         self.webcam_addr = webcam_addr
-        self.use_depth_cam = use_depth_cam
-        self.files = LoadData(source, webcam, webcam_addr, use_depth_cam)
+        self.files = LoadData(source, webcam, webcam_addr)
         self.source = source
-
-        # Tracker
-        self.tracking = False
-        # self.tracker_CSRT = cv2.TrackerCSRT_create()
 
 
     def model_switch(self, model, img_size):
@@ -79,7 +71,7 @@ class Inferer:
         ''' Model Inference and results visualization '''
         vid_path, vid_writer, windows = None, None, []
         fps_calculator = CalcFPS()
-        for img_src, img_path, vid_cap, depth_img in tqdm(self.files):
+        for img_src, img_path, vid_cap in tqdm(self.files):
             img, img_src = self.process_image(img_src, self.img_size, self.stride, self.half)
             img = img.to(self.device)
             if len(img.shape) == 3:
@@ -88,10 +80,9 @@ class Inferer:
             t1 = time.time()
             pred_results = self.model(img)
             det = non_max_suppression(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)[0]
-            # print(det)
             t2 = time.time()
 
-            if self.webcam or self.use_depth_cam:
+            if self.webcam:
                 save_path = osp.join(save_dir, self.webcam_addr)
                 txt_path = osp.join(save_dir, self.webcam_addr)
             else:
@@ -107,25 +98,21 @@ class Inferer:
             # check image and font
             assert img_ori.data.contiguous, 'Image needs to be contiguous. Please apply to input images with np.ascontiguousarray(im).'
             self.font_check()
+
             if len(det):
                 det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
-                # class_0_detections = [det for det in det if det[4] == 0 and det[5] > 0.8]
-                # print(det)
-
                 for *xyxy, conf, cls in reversed(det):
-                    class_num = int(cls)  # integer class
-                    label = None if hide_labels else (
-                        self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
-                    # print(label)
-
-                    self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, depth_img, label,
-                                            color=self.generate_colors(class_num, True))
-
                     if save_txt:  # Write to file
                         xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf)
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
+
+                    if save_img:
+                        class_num = int(cls)  # integer class
+                        label = None if hide_labels else (self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
+
+                        self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, label, color=self.generate_colors(class_num, True))
 
                 img_src = np.asarray(img_ori)
 
@@ -150,9 +137,7 @@ class Inferer:
                     cv2.namedWindow(str(img_path), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
                     cv2.resizeWindow(str(img_path), img_src.shape[1], img_src.shape[0])
                 cv2.imshow(str(img_path), img_src)
-                if cv2.waitKey(1) == 27:  # Check if ESC key is pressed
-                    cv2.destroyAllWindows()  # Close all OpenCV windows
-                    return  # Terminate the function
+                cv2.waitKey(1)  # 1 millisecond
 
             # Save results (image with detections)
             if save_img:
@@ -252,14 +237,9 @@ class Inferer:
         return text_size
 
     @staticmethod
-    def plot_box_and_label(image, lw, box, depth_img, label='', color=(128, 128, 128), txt_color=(255, 255, 255), font=cv2.FONT_HERSHEY_COMPLEX):
+    def plot_box_and_label(image, lw, box, label='', color=(128, 128, 128), txt_color=(255, 255, 255), font=cv2.FONT_HERSHEY_COMPLEX):
         # Add one xyxy box to image with label
         p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
-        c1 = int(abs(p1[0] - p2[0]) / 2)
-        c2 = int(abs(p1[1] - p2[1]) / 2)
-
-        if depth_img is not None and len(depth_img) > 0:
-            depth_mm = depth_img[c1, c2]
         cv2.rectangle(image, p1, p2, color, thickness=lw, lineType=cv2.LINE_AA)
         if label:
             tf = max(lw - 1, 1)  # font thickness
@@ -267,30 +247,8 @@ class Inferer:
             outside = p1[1] - h - 3 >= 0  # label fits outside box
             p2 = p1[0] + w, p1[1] - h - 3 if outside else p1[1] + h + 3
             cv2.rectangle(image, p1, p2, color, -1, cv2.LINE_AA)  # filled
-            if depth_img is not None and len(depth_img) > 0:
-                cv2.putText(image, "{} cm".format(depth_mm / 10), (p1[0] + 5, p1[1] + 60), 0, 1.0, (255, 255, 255), 2)
             cv2.putText(image, label, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2), font, lw / 3, txt_color,
                         thickness=tf, lineType=cv2.LINE_AA)
-
-    # @staticmethod
-    # def KLT_object_tracking(img, bounding_box):
-    #     # Initialize KLT tracker
-    #     # todo
-    #     pass
-    #
-    # def CSRT_object_tracking(self, img, bounding_box):
-    #     # Initialize KLT tracker
-    #     # todo
-    #     ok, bbox = self.tracker_CSRT.update(img)
-    #
-    #     if ok:
-    #         # Tracking success
-    #         p1 = (int(bbox[0]), int(bbox[1]))
-    #         p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
-    #         cv2.rectangle(frame, p1, p2, (0, 255, 0), 2, 1)
-    #     else:
-    #         # Tracking failure
-    #         cv2.putText(frame, "Tracking failure detected", (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2)
 
     @staticmethod
     def font_check(font='./yolov6/utils/Arial.ttf', size=10):
