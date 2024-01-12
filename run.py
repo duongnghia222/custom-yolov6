@@ -6,7 +6,7 @@ from yolov6.utils.events import LOGGER
 from yolov6.core.inferer import Inferer
 
 @torch.no_grad()
-def run(weights='yolov6s.pt',
+def run(weights='yolov6l.pt',
         source='data/images',
         webcam=True,
         webcam_addr='0',
@@ -18,7 +18,7 @@ def run(weights='yolov6s.pt',
         max_det=1000,
         device='0',
         save_txt=False,
-        not_save_img=True,
+        not_save_img=False,
         save_dir=None,
         view_img=True,
         classes=None,

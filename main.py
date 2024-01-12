@@ -25,17 +25,20 @@ if str(ROOT) not in sys.path:
 
 def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
     rs_camera = RealsenseCamera()
+    # webcam = cv2.VideoCapture("C:\\Users\\nghia\\Desktop\\WIN_20240112_09_12_34_Pro.mp4")
+    # webcam = cv2.VideoCapture(0)
     print("Starting RealSense camera detection. Press 'q' to quit.")
     mode = 'finding' # for debug, change to disabled after that
     last_gesture = None
     gesture_start = None
     detection = None
     last_finder_call_time = None
-    object_to_find = {"name": "cup", "conf_threshold": 0.5} # for debug, change to None after that
+    object_to_find = {"name": "bottle", "conf_threshold": 0.5} # for debug, change to None after that
     # object_to_find = None
-
+    # depth_frame = 0
     while True:
         ret, color_frame, depth_frame = rs_camera.get_frame_stream()
+        # ret, color_frame = webcam.read()
         if not ret:
             print("Error: Could not read frame.")
             break
@@ -69,37 +72,34 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
         # Implement the functionalities for each mode
         if mode == 'finding':
             # Implement finding functionality
-            # if finger_counts != last_gesture:
-            #     last_gesture = finger_counts
-            #     gesture_start = time.time()
-            # elif time.time() - gesture_start >= 2 and not object_to_find:
-            #     # print(finger_counts)
-            #     # print(finger_counts_mapping_obj(finger_counts))
-            #     object_to_find = finger_counts_mapping_obj(finger_counts)
-            # if object_to_find:
-            #     if last_finder_call_time is None:
-            #         last_finder_call_time = time.time()
-            #     object_index = coco_yaml.index(object_to_find["name"])
-            #     # print(f"Looking for: {object_to_find['name']} with index", object_index)
-            #     conf_threshold = object_to_find["conf_threshold"]
-            object_index = coco_yaml.index(object_to_find["name"])
-            conf_threshold = object_to_find["conf_threshold"]
+            if finger_counts != last_gesture:
+                last_gesture = finger_counts
+                gesture_start = time.time()
+            elif time.time() - gesture_start >= 2 and not object_to_find:
+                # print(finger_counts)
+                # print(finger_counts_mapping_obj(finger_counts))
+                object_to_find = finger_counts_mapping_obj(finger_counts)
+            if object_to_find:
+                if last_finder_call_time is None:
+                    last_finder_call_time = time.time()
+                object_index = coco_yaml.index(object_to_find["name"])
+                # print(f"Looking for: {object_to_find['name']} with index", object_index)
+                conf_threshold = object_to_find["conf_threshold"]
 
-            if detection is None or (time.time() - last_finder_call_time >= 2):
-                last_finder_call_time = time.time()
-                detection = yolo.object_finder(color_frame, object_index, predict_threshold=conf_threshold)
-                print(detection)
-                if detection is not None:
-                    if len(detection) > 1:
-                        detection = detection[0]
-                    detection = detection.flatten()
 
-                # if detection is not None and len(detection):
-                #     print("detected")
-                #     *xyxy, conf, cls = detection
-                #     #[285, 194, 394, 298]
-                #     xmin, ymin, xmax, ymax = map(int, xyxy)  # Convert each element to an integer
-                #     object_mask, depth = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
+                if detection is None or (time.time() - last_finder_call_time >= 0):
+                    last_finder_call_time = time.time()
+                    detection = yolo.object_finder(color_frame, object_index, predict_threshold=conf_threshold)
+                    if detection is not None:
+                        if len(detection) > 1:
+                            detection = detection[0]
+                        detection = detection.flatten()
+
+                if detection is not None and len(detection):
+                    *xyxy, conf, cls = detection
+                    #[285, 194, 394, 298]
+                    xmin, ymin, xmax, ymax = map(int, xyxy)  # Convert each element to an integer
+                    object_mask, depth = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
                 #     cv2.imshow("Object Mask", object_mask)
                 #     color_roi = color_frame[ymin:ymax, xmin:xmax]
                 #     _, binary_mask = cv2.threshold(object_mask, 127, 255, cv2.THRESH_BINARY)
@@ -115,8 +115,8 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
                 #                             font=cv2.FONT_HERSHEY_COMPLEX)
                 #     print("distance", depth)
                 #
-                #     instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)
-                #     print(instruction)
+                    instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)
+                    print(instruction)
                     # voice.speak(instruction)
 
         elif mode == 'detecting':
@@ -159,6 +159,7 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
             break
 
     rs_camera.release()
+    # webcam.release()
     cv2.destroyAllWindows()
 
 def finger_counts_mapping_obj(object_code):
@@ -168,7 +169,7 @@ def finger_counts_mapping_obj(object_code):
         return {"name": "cup", "conf_threshold": 0.4}
 
 
-def create_inferer(weights=osp.join(ROOT, 'dangerous_obj.pt'),
+def create_inferer(weights=osp.join(ROOT, 'yolov6s_mbla.pt'),
         yaml='data/coco.yaml',
         img_size=[640,640],
         conf_threshold=0.4,

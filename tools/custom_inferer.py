@@ -71,7 +71,7 @@ class Inferer:
             img = img[None]
             # expand for batch dim
         t1 = time.time()
-        predict_results = self.model(img)
+        predict_results = self.model(img).detach()
         det = non_max_suppression(prediction=predict_results, conf_thres=predict_threshold,
                                   classes=class_num)[0]
         t2 = time.time()
@@ -91,7 +91,7 @@ class Inferer:
             img = img[None]
             # expand for batch dim
         t1 = time.time()
-        predict_results = self.model(img)
+        predict_results = self.model(img).detach()
         det = non_max_suppression(prediction=predict_results, conf_thres=conf_threshold, iou_thres=self.iou_threshold,
                                   agnostic=self.agnostic_nms, max_det=self.max_det)[0]
         t2 = time.time()
