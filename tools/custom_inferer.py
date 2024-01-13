@@ -261,7 +261,6 @@ class Inferer:
         text_color=(0, 255, 0),
         text_color_bg=(0, 0, 0),
     ):
-
         offset = (5, 5)
         x, y = pos
         text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)

@@ -4,14 +4,16 @@ import numpy as np
 
 
 class RealsenseCamera:
-    def __init__(self):
+    def __init__(self, width=640, height=480):
         # Configure depth and color streams
         print("Loading Intel Realsense Camera")
         self.pipeline = rs.pipeline()
 
         config = rs.config()
-        config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-        config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+
+        # width -> height
+        config.enable_stream(rs.stream.color, width, height, rs.format.bgr8, 30)
+        config.enable_stream(rs.stream.depth, width, height, rs.format.z16, 30)
 
         # Start streaming
         self.pipeline.start(config)

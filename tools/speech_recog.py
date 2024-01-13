@@ -7,8 +7,9 @@ r = sr.Recognizer()
 with sr.Microphone() as source:
     print("Please say something:")
     # Adjust the recognizer sensitivity to ambient noise
-    r.adjust_for_ambient_noise(source, duration=1)
+    r.adjust_for_ambient_noise(source, duration=3)
     # Listening for the first phrase and extracting it into audio data
+    print("Now")
     audio = r.listen(source)
 
 try:

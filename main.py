@@ -9,12 +9,11 @@ import os.path as osp
 from tools.finger_count import FingersCount
 from tools.tracker import Tracker
 from tools.instruction import navigate_to_object
-from tools.test_pyttx3 import speak
 from tools.voice_navigator import TextToSpeech
 voice = TextToSpeech()
 from tools.realsense_camera import *
 from tools.custom_segmentation import segment_object
-from tools.custom_inferer import Inferer
+from tools.custom_inferer import Inferer, CalcFPS
 from yolov6.utils.events import load_yaml
 
 
@@ -24,17 +23,19 @@ if str(ROOT) not in sys.path:
 
 
 def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
+    # rs_camera = RealsenseCamera(width=1280, height=720)
     rs_camera = RealsenseCamera()
+    fps = CalcFPS()
     # webcam = cv2.VideoCapture("C:\\Users\\nghia\\Desktop\\WIN_20240112_09_12_34_Pro.mp4")
     # webcam = cv2.VideoCapture(0)
     print("Starting RealSense camera detection. Press 'q' to quit.")
-    mode = 'finding' # for debug, change to disabled after that
+    mode = 'disabled'  # For debug, change to disabled after that
     last_gesture = None
     gesture_start = None
     detection = None
     last_finder_call_time = None
-    object_to_find = {"name": "bottle", "conf_threshold": 0.5} # for debug, change to None after that
-    # object_to_find = None
+    # object_to_find = {"name": "bottle", "conf_threshold": 0.5} # for debug, change to None after that
+    object_to_find = None
     # depth_frame = 0
     while True:
         ret, color_frame, depth_frame = rs_camera.get_frame_stream()
@@ -42,7 +43,7 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
         if not ret:
             print("Error: Could not read frame.")
             break
-
+        t1 = time.time()
         finger_counts = fc.infer(color_frame)
 
         # Only change gestures if the current mode is disabled or a mode exit gesture is detected
@@ -83,11 +84,11 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
                 if last_finder_call_time is None:
                     last_finder_call_time = time.time()
                 object_index = coco_yaml.index(object_to_find["name"])
-                # print(f"Looking for: {object_to_find['name']} with index", object_index)
+                print(f"Looking for: {object_to_find['name']} with index", object_index)
                 conf_threshold = object_to_find["conf_threshold"]
 
 
-                if detection is None or (time.time() - last_finder_call_time >= 0):
+                if detection is None or (time.time() - last_finder_call_time >= 2):
                     last_finder_call_time = time.time()
                     detection = yolo.object_finder(color_frame, object_index, predict_threshold=conf_threshold)
                     if detection is not None:
@@ -100,6 +101,7 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
                     #[285, 194, 394, 298]
                     xmin, ymin, xmax, ymax = map(int, xyxy)  # Convert each element to an integer
                     object_mask, depth = segment_object(depth_frame, [xmin, ymin, xmax, ymax])
+
                 #     cv2.imshow("Object Mask", object_mask)
                 #     color_roi = color_frame[ymin:ymax, xmin:xmax]
                 #     _, binary_mask = cv2.threshold(object_mask, 127, 255, cv2.THRESH_BINARY)
@@ -152,8 +154,20 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
                     instruction = "very front"
                 guide = DANGEROUS_CLASS_NAMES[cls] + "on the" + instruction + str(depth) + "centimeters away"
                 # voice.speak(guide)
-
+        t2 = time.time()
+        fps.update(1.0 / (t2 - t1))
+        avg_fps = fps.accumulate()
+        yolo.draw_text(
+            color_frame,
+            f"FPS: {avg_fps:0.1f}",
+            pos=(20, 20),
+            font_scale=1.0,
+            text_color=(204, 85, 17),
+            text_color_bg=(255, 255, 255),
+            font_thickness=2,
+        )
         cv2.imshow('RealSense Camera Detection', color_frame)
+
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
