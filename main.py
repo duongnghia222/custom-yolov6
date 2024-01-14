@@ -119,7 +119,7 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
                 #
                     instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)
                     print(instruction)
-                    # voice.speak(instruction)
+                    voice.speak(instruction)
 
         elif mode == 'detecting':
             # Implement detecting functionality
@@ -155,12 +155,22 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
                 guide = DANGEROUS_CLASS_NAMES[cls] + "on the" + instruction + str(depth) + "centimeters away"
                 # voice.speak(guide)
         t2 = time.time()
-        fps.update(1.0 / (t2 - t1))
+        frame_fps = 1.0 / (t2 - t1)
+        fps.update(frame_fps)
+        yolo.draw_text(
+            color_frame,
+            f"FPS: {frame_fps:0.1f}",
+            pos=(0, 0),
+            font_scale=1.0,
+            text_color=(204, 85, 17),
+            text_color_bg=(255, 255, 255),
+            font_thickness=2,
+        )
         avg_fps = fps.accumulate()
         yolo.draw_text(
             color_frame,
-            f"FPS: {avg_fps:0.1f}",
-            pos=(20, 20),
+            f"AVG FPS: {avg_fps:0.1f}",
+            pos=(0, 30),
             font_scale=1.0,
             text_color=(204, 85, 17),
             text_color_bg=(255, 255, 255),
@@ -202,7 +212,7 @@ def create_inferer(weights=osp.join(ROOT, 'yolov6s_mbla.pt'),
         hide_conf=False,
         half=False):
     weights = osp.join(os.getcwd(), weights)
-    infer = Inferer(weights, device, yaml, img_size, half)
+    infer = Inferer(weights, device, yaml, img_size, half, conf_threshold, iou_threshold, agnostic_nms, max_det)
     return infer
 
 

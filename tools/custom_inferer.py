@@ -21,7 +21,8 @@ from yolov6.utils.nms import non_max_suppression
 
 
 class Inferer:
-    def __init__(self,weights, device, yaml, img_size, half):
+    def __init__(self, weights, device, yaml, img_size, half,
+                 conf_threshold, iou_threshold, agnostic_nms, max_det, view_img=True):
 
         self.__dict__.update(locals())
 
@@ -30,9 +31,11 @@ class Inferer:
         self.img_size = img_size
         cuda = self.device != 'cpu' and torch.cuda.is_available()
         self.device = torch.device(f'cuda:{device}' if cuda else 'cpu')
+        print(self.device)
         self.model = DetectBackend(weights, device=self.device)
         self.stride = self.model.stride
         self.class_names = load_yaml(yaml)['names']
+        # self.custom_class_names = load_yaml(yaml)['custom_names']
         self.img_size = self.check_img_size(self.img_size, s=self.stride)  # check image size
         self.half = half
 
@@ -47,8 +50,12 @@ class Inferer:
             self.half = False
 
         if self.device.type != 'cpu':
-            self.model(torch.zeros(1, 3, *self.img_size).to(self.device).type_as(
-                next(self.model.model.parameters())))  # warmup
+            self.model(torch.zeros(1, 3, *self.img_size).to(self.device).type_as(next(self.model.model.parameters())))  # warmup
+        self.conf_threshold = conf_threshold
+        self.iou_threshold = iou_threshold
+        self.agnostic_nms = agnostic_nms
+        self.max_det = max_det
+        self.view_img = view_img
 
 
 
