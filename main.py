@@ -22,20 +22,23 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
 
-def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
-    # rs_camera = RealsenseCamera(width=1280, height=720)
-    rs_camera = RealsenseCamera()
+def run(fc, yolo, custom_model, voice):
+    rs_camera = RealsenseCamera(width=1280, height=720)
+    # rs_camera = RealsenseCamera()
     fps = CalcFPS()
+    # hand_cascade = cv2.CascadeClassifier('hand.xml')
+
     # webcam = cv2.VideoCapture("C:\\Users\\nghia\\Desktop\\WIN_20240112_09_12_34_Pro.mp4")
     # webcam = cv2.VideoCapture(0)
     print("Starting RealSense camera detection. Press 'q' to quit.")
     mode = 'disabled'  # For debug, change to disabled after that
     last_gesture = None
-    gesture_start = None
+    gesture_start = 0.1
     detection = None
     last_finder_call_time = None
     # object_to_find = {"name": "bottle", "conf_threshold": 0.5} # for debug, change to None after that
     object_to_find = None
+    finger_counts = None
     # depth_frame = 0
     while True:
         ret, color_frame, depth_frame = rs_camera.get_frame_stream()
@@ -44,6 +47,11 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
             print("Error: Could not read frame.")
             break
         t1 = time.time()
+        # gray = cv2.cvtColor(color_frame, cv2.COLOR_BGR2GRAY)
+        # hands = hand_cascade.detectMultiScale(gray, 1.1, 4)
+        # for (x, y, w, h) in hands:
+        #     cv2.rectangle(color_frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        # print(t1)
         finger_counts = fc.infer(color_frame)
 
         # Only change gestures if the current mode is disabled or a mode exit gesture is detected
@@ -57,15 +65,15 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
                 if finger_counts == [0, 0]:
                     mode = 'disabled'
                     object_to_find = None
-                    print("All modes disabled.")
+                    voice.speak("All modes disabled.")
                 elif finger_counts == [0, 1]:
                     mode = 'finding'
                     object_to_find = None
-                    print("Finding mode activated.")
+                    voice.speak("Finding mode activated.")
                 elif finger_counts == [0, 2]:
                     mode = 'detecting'
                     object_to_find = None
-                    print("Detecting mode activated.")
+                    voice.speak("Detecting mode activated.")
                 elif finger_counts == [0, 5]:
                     print("Program stopping...")
                     break
@@ -80,11 +88,13 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
                 # print(finger_counts)
                 # print(finger_counts_mapping_obj(finger_counts))
                 object_to_find = finger_counts_mapping_obj(finger_counts)
+                if object_to_find:
+                    voice.speak(f"Looking for: {object_to_find['name']}")
             if object_to_find:
                 if last_finder_call_time is None:
                     last_finder_call_time = time.time()
-                object_index = coco_yaml.index(object_to_find["name"])
-                print(f"Looking for: {object_to_find['name']} with index", object_index)
+                object_index = yolo.class_names.index(object_to_find["name"])
+
                 conf_threshold = object_to_find["conf_threshold"]
 
 
@@ -152,10 +162,13 @@ def run(fc, yolo, custom_model, voice, coco_yaml, custom_dataset_yaml):
                     instruction = "left"
                 elif instruction == "stop":
                     instruction = "very front"
-                guide = DANGEROUS_CLASS_NAMES[cls] + "on the" + instruction + str(depth) + "centimeters away"
+                guide = custom_model.class_names[cls] + "on the" + instruction + str(depth) + "centimeters away"
                 # voice.speak(guide)
         t2 = time.time()
-        frame_fps = 1.0 / (t2 - t1)
+        if t2 - t1 > 1e-9:
+            frame_fps = 1.0 / (t2 - t1)
+        else:
+            frame_fps = 0
         fps.update(frame_fps)
         yolo.draw_text(
             color_frame,
@@ -228,7 +241,7 @@ if __name__ == "__main__":
     fc = FingersCount(screen_width, screen_height)
     yolo = create_inferer()
     custom_model = create_inferer(weights='dangerous_obj.pt', yaml='data/dangerous_obj.yaml')
-    run(fc, yolo, custom_model, voice, coco_yaml=CLASS_NAMES, custom_dataset_yaml=DANGEROUS_CLASS_NAMES)
+    run(fc, yolo, custom_model, voice)
 
 
 
