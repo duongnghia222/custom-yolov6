@@ -2,7 +2,7 @@ import pyttsx3
 import cv2
 
 
-def navigate_to_object(bbox, depth, color_frame):
+def navigate_to_object(bbox, depth, color_frame, min_dis=10):
     """
     Navigates the blind user towards the object using audio instructions based on bounding box and depth information.
 
@@ -16,7 +16,7 @@ def navigate_to_object(bbox, depth, color_frame):
     xmin, ymin, xmax, ymax = bbox
     box_center_x = int((xmin + xmax) / 2)
 
-
+    print(depth)
     # Adjust threshold based on depth
     middle_x = color_frame.shape[1] // 2
     scale = 80000
@@ -41,8 +41,7 @@ def navigate_to_object(bbox, depth, color_frame):
         direction = "move forward"
 
     # Incorporate depth information for distance
-    minimum_safe_distance = 10  # Define this based on your requirements
-    if depth < minimum_safe_distance:
+    if depth < min_dis:
         instruction = "stop"
     else:
         instruction = f"{direction}"

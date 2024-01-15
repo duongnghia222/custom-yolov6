@@ -370,3 +370,6 @@ class CalcFPS:
             return np.average(self.framerate)
         else:
             return 0.0
+
+    def reset(self):
+        self.framerate.clear()

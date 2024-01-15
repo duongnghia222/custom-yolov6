@@ -65,14 +65,17 @@ def run(fc, yolo, custom_model, voice):
                 if finger_counts == [0, 0]:
                     mode = 'disabled'
                     object_to_find = None
+                    fps.reset()
                     voice.speak("All modes disabled.")
                 elif finger_counts == [0, 1]:
                     mode = 'finding'
                     object_to_find = None
+                    fps.reset()
                     voice.speak("Finding mode activated.")
                 elif finger_counts == [0, 2]:
                     mode = 'detecting'
                     object_to_find = None
+                    fps.reset()
                     voice.speak("Detecting mode activated.")
                 elif finger_counts == [0, 5]:
                     print("Program stopping...")
@@ -98,8 +101,9 @@ def run(fc, yolo, custom_model, voice):
                 conf_threshold = object_to_find["conf_threshold"]
 
 
-                if detection is None or (time.time() - last_finder_call_time >= 2):
+                if detection is None or (time.time() - last_finder_call_time >= 10):
                     last_finder_call_time = time.time()
+                    print("called")
                     detection = yolo.object_finder(color_frame, object_index, predict_threshold=conf_threshold)
                     if detection is not None:
                         if len(detection) > 1:
@@ -153,7 +157,7 @@ def run(fc, yolo, custom_model, voice):
                 custom_model.plot_box_and_label(color_frame, max(round(sum(color_frame.shape) / 2 * 0.003), 2), xyxy,\
                                         depth, label='Distance', color=(128, 128, 128), txt_color=(255, 255, 255),\
                                         font=cv2.FONT_HERSHEY_COMPLEX)
-                instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame)
+                instruction = navigate_to_object([xmin, ymin, xmax, ymax], depth, color_frame, 50)
                 if instruction == "move forward":
                     instruction = "front"
                 elif instruction == "turn left":
@@ -169,7 +173,9 @@ def run(fc, yolo, custom_model, voice):
             frame_fps = 1.0 / (t2 - t1)
         else:
             frame_fps = 0
-        fps.update(frame_fps)
+        if frame_fps != 0:
+            fps.update(frame_fps)
+        avg_fps = fps.accumulate()
         yolo.draw_text(
             color_frame,
             f"FPS: {frame_fps:0.1f}",
@@ -179,7 +185,7 @@ def run(fc, yolo, custom_model, voice):
             text_color_bg=(255, 255, 255),
             font_thickness=2,
         )
-        avg_fps = fps.accumulate()
+
         yolo.draw_text(
             color_frame,
             f"AVG FPS: {avg_fps:0.1f}",
@@ -242,6 +248,10 @@ if __name__ == "__main__":
     yolo = create_inferer()
     custom_model = create_inferer(weights='dangerous_obj.pt', yaml='data/dangerous_obj.yaml')
     run(fc, yolo, custom_model, voice)
+    yolo = None
+    custom_model = None
+    while True:
+        pass
 
 
 
