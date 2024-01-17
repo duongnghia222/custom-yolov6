@@ -11,6 +11,10 @@ from tools.tracker import Tracker
 from tools.instruction import navigate_to_object
 from tools.voice_navigator import TextToSpeech
 voice = TextToSpeech()
+from vosk import Model, KaldiRecognizer
+import pyaudio
+model = Model(r"tools/vosk-model-small-en-us-0.15")
+recognizer = KaldiRecognizer(model, 16000)
 from tools.realsense_camera import *
 from tools.custom_segmentation import segment_object
 from tools.custom_inferer import Inferer, CalcFPS
@@ -31,7 +35,7 @@ def run(fc, yolo, custom_model, voice):
     # webcam = cv2.VideoCapture("C:\\Users\\nghia\\Desktop\\WIN_20240112_09_12_34_Pro.mp4")
     # webcam = cv2.VideoCapture(0)
     print("Starting RealSense camera detection. Press 'q' to quit.")
-    mode = 'disabled'  # For debug, change to disabled after that
+    mode = 'finding'  # For debug, change to disabled after that
     last_gesture = None
     gesture_start = 0.1
     detection = None
@@ -83,16 +87,37 @@ def run(fc, yolo, custom_model, voice):
 
         # Implement the functionalities for each mode
         if mode == 'finding':
-            # Implement finding functionality
-            if finger_counts != last_gesture:
-                last_gesture = finger_counts
-                gesture_start = time.time()
-            elif time.time() - gesture_start >= 2 and not object_to_find:
-                # print(finger_counts)
-                # print(finger_counts_mapping_obj(finger_counts))
-                object_to_find = finger_counts_mapping_obj(finger_counts)
-                if object_to_find:
-                    voice.speak(f"Looking for: {object_to_find['name']}")
+            if not object_to_find:
+                mic = pyaudio.PyAudio()
+
+                stream = mic.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8192)
+                stream.start_stream()
+                voice.speak("What you want to find")
+                while not object_to_find:
+                    data = stream.read(4096)
+                    if recognizer.AcceptWaveform(data):
+                        text = recognizer.Result()
+                        text = text[14:-3]
+                        if object_dictionary(text) is not None:
+                            object_to_find = object_dictionary(text)
+                            print(object_to_find)
+                            stream.stop_stream()
+                            stream.close()
+                            mic.terminate()
+
+
+
+
+            # # Implement finding functionality
+            # if finger_counts != last_gesture:
+            #     last_gesture = finger_counts
+            #     gesture_start = time.time()
+            # elif time.time() - gesture_start >= 2 and not object_to_find:
+            #     # print(finger_counts)
+            #     # print(finger_counts_mapping_obj(finger_counts))
+            #     object_to_find = finger_counts_mapping_obj(finger_counts)
+            #     if object_to_find:
+            #         voice.speak(f"Looking for: {object_to_find['name']}")
             if object_to_find:
                 if last_finder_call_time is None:
                     last_finder_call_time = time.time()
@@ -103,7 +128,6 @@ def run(fc, yolo, custom_model, voice):
 
                 if detection is None or (time.time() - last_finder_call_time >= 10):
                     last_finder_call_time = time.time()
-                    print("called")
                     detection = yolo.object_finder(color_frame, object_index, predict_threshold=conf_threshold)
                     if detection is not None:
                         if len(detection) > 1:
@@ -165,7 +189,7 @@ def run(fc, yolo, custom_model, voice):
                 elif instruction == "turn right":
                     instruction = "left"
                 elif instruction == "stop":
-                    instruction = "very front"
+                    instruction = "very close"
                 guide = custom_model.class_names[cls] + "on the" + instruction + str(depth) + "centimeters away"
                 # voice.speak(guide)
         t2 = time.time()
@@ -204,6 +228,12 @@ def run(fc, yolo, custom_model, voice):
     rs_camera.release()
     # webcam.release()
     cv2.destroyAllWindows()
+
+
+def object_dictionary(text):
+    if text in yolo.class_names:
+        return {"name": text, "conf_threshold": 0.4}
+    return None
 
 def finger_counts_mapping_obj(object_code):
     if object_code == [1, 0]:
@@ -248,10 +278,7 @@ if __name__ == "__main__":
     yolo = create_inferer()
     custom_model = create_inferer(weights='dangerous_obj.pt', yaml='data/dangerous_obj.yaml')
     run(fc, yolo, custom_model, voice)
-    yolo = None
-    custom_model = None
-    while True:
-        pass
+
 
 
 
